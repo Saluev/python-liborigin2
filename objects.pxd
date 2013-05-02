@@ -121,8 +121,12 @@ cdef extern from "OriginObj.h" namespace "Origin":
         VerticalDense, VerticalMedium, VerticalSparse, CrossDense, CrossMedium, CrossSparse
     
     cdef cppclass Color:
-        Color_ColorType cType "type"
-        unsigned char *custom # this is a union actually
+        Color_ColorType type
+        
+        unsigned char regular  #
+        unsigned char *custom  # this is a union actually
+        unsigned char starting #
+        unsigned char column   #
 
     cdef cppclass Rect:
         short left
@@ -191,7 +195,7 @@ cdef extern from "OriginObj.h" namespace "Origin":
         vector[SpreadColumn] columns
         #SpreadSheet(const string& _name = "")
     
-    cdef cppclass Excel(Window):
+    cdef cppclass Excel(Window): # WTF, is this class necessary?
         unsigned int maxRows
         bool loose
         vector[SpreadSheet] sheets
@@ -223,8 +227,7 @@ cdef extern from "OriginObj.h" namespace "Origin":
         double end
         int totalPoints
         unsigned int index
-
-        Function(const string& _name = "", unsigned int _index = 0)
+        #Function(const string& _name = "", unsigned int _index = 0)
 
     cdef cppclass TextBox:
         string text
@@ -235,8 +238,8 @@ cdef extern from "OriginObj.h" namespace "Origin":
         int tab
         BorderType borderType
         Attach attach
-        TextBox(const string& _text = "")
-        TextBox(const string& _text, const Rect& _clientRect, const Color& _color, unsigned short _fontSize, int _rotation, int _tab, BorderType _borderType, Attach _attach)
+        #TextBox(const string& _text = "")
+        #TextBox(const string& _text, const Rect& _clientRect, const Color& _color, unsigned short _fontSize, int _rotation, int _tab, BorderType _borderType, Attach _attach)
     
     cdef cppclass PieProperties:
         unsigned char viewAngle
@@ -512,6 +515,8 @@ cdef extern from "OriginObj.h" namespace "Origin":
         time_t creationDate
         time_t modificationDate
         ProjectNode(const string& _name = "", ProjectNode_NodeType _type = Folder, const time_t _creationDate = time(NULL), const time_t _modificationDate = time(NULL))
+
+ctypedef SurfaceProperties.SurfaceColoration SurfaceColoration
 
 ####################################################################################################
 ###########################################             ############################################
