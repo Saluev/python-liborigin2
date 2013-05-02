@@ -1,519 +1,194 @@
-from libcpp.pair cimport pair
-from libcpp.vector cimport vector
-from libcpp.string cimport string
-from libcpp cimport bool
-cdef extern from "<time.h>":
-    ctypedef long time_t
 
-cdef extern from "boost/variant.hpp" namespace "boost":
-    cdef cppclass boostvariant "variant" [T1, T2]:
-        pass
-        
-####################################################################################################
-############################################           #############################################
-########################################### OriginObj.h ############################################
-###########################################            #############################################
-####################################################################################################
-cdef extern from "OriginObj.h" namespace "Origin":
-    
-    cdef enum ValueType:
-         Numeric = 0, Text = 1, Time = 2, Date = 3,  Month = 4, Day = 5, ColumnHeading = 6,
-         TickIndexedDataset = 7, TextNumeric = 9, Categorical = 10
-    cdef enum NumericDisplayType:
-         DefaultDecimalDigits = 0, DecimalPlaces = 1, SignificantDigits = 2
-    cdef enum Attach:
-         Frame = 0, Page = 1, Scale = 2
-    cdef enum BorderType:
-         BlackLine = 0, Shadow = 1, DarkMarble = 2, WhiteOut = 3, BlackOut = 4, btNone "None" = -1
-    cdef enum FillPattern:
-        NoFill, BDiagDense, BDiagMedium, BDiagSparse, FDiagDense, FDiagMedium, FDiagSparse, 
-        DiagCrossDense, DiagCrossMedium, DiagCrossSparse, HorizontalDense, HorizontalMedium, HorizontalSparse, 
-        VerticalDense, VerticalMedium, VerticalSparse, CrossDense, CrossMedium, CrossSparse
-    
-    cdef enum Color_ColorType:
-        ctNone "None", Automatic, Regular, Custom, Increment, Indexing, RGB, Mapping
-    cdef enum Color_RegularColor:
-        Black = 0, Red = 1, Green = 2, Blue = 3, Cyan = 4, Magenta = 5, Yellow = 6, DarkYellow = 7, Navy = 8,
-        Purple = 9, Wine = 10, Olive = 11, DarkCyan = 12, Royal=  13, Orange = 14, Violet = 15, Pink = 16, White = 17,
-        LightGray = 18, Gray = 19, LTYellow = 20, LTCyan = 21, LTMagenta = 22, DarkGray = 23#, Custom = 255
-    
-    cdef cppclass Color:
-        Color_ColorType type
-        unsigned char data[3] # this is a union actually
-
-    cdef cppclass Rect:
-        short left
-        short top
-        short right
-        short bottom
-        Rect(short width = 0, short height = 0)
-        int height() const
-        int width() const
-        bool isValid() const
-    
-    cdef cppclass ColorMapLevel:
-        Color fillColor
-        unsigned char fillPattern
-        Color fillPatternColor
-        double fillPatternLineWidth
-        bool lineVisible
-        Color lineColor
-        unsigned char lineStyle
-        double lineWidth
-        bool labelVisible
-
-    ctypedef vector[pair[double, ColorMapLevel]] ColorMapVector
-
-    cdef cppclass ColorMap:
-        bool fillEnabled
-        ColorMapVector levels
-    
-    cdef enum Window_State:
-        Normal, Minimized, Maximized
-    cdef enum Window_Title:
-        Name, Label, Both
-    
-    cdef cppclass Window:
-        string name
-        string label
-        int objectID
-        bool hidden
-        Window_State state
-        Window_Title title
-        Rect frameRect
-        time_t creationDate
-        time_t modificationDate
-        Window(const string& _name= "", const string& _label = "", bool _hidden = false)
-    
-    ctypedef boostvariant[double, string] variant
-    
-    cdef enum SpreadColumn_ColumnType:
-        X, Y, Z, XErr, YErr, Label, NONE
-    
-    cdef cppclass SpreadColumn:
-        string name
-        SpreadColumn_ColumnType type
-        ValueType valueType
-        int valueTypeSpecification
-        int significantDigits
-        int decimalPlaces
-        NumericDisplayType numericDisplayType
-        string command
-        string comment
-        int width
-        unsigned int index
-        unsigned int sheet
-        vector[variant] data
-        SpreadColumn(const string& _name = "", unsigned int _index = 0)
-    
-    cdef cppclass SpreadSheet: # TODO: inheritance?..
-        unsigned int maxRows
-        bool loose
-        bool multisheet
-        unsigned int sheets
-        vector[SpreadColumn] columns
-        SpreadSheet(const string& _name = "")
-    
-    cdef cppclass Excel:
-        unsigned int maxRows
-        bool loose
-        vector[SpreadSheet] sheets
-        Excel(const string& _name = "", const string& _label = "", int _maxRows = 0, bool _hidden = false, bool _loose = true)
-    
-    cdef enum Matrix_ViewType:
-        DataView, ImageView
-    
-    cdef enum Matrix_HeaderViewType:
-        ColumnRow, XY
-
-    cdef cppclass Matrix:
-        unsigned short rowCount
-        unsigned short columnCount
-        int valueTypeSpecification
-        int significantDigits
-        int decimalPlaces
-        NumericDisplayType numericDisplayType
-        string command
-        int width
-        unsigned int index
-        unsigned int sheets
-        Matrix_ViewType view
-        Matrix_HeaderViewType header
-        ColorMap colorMap
-        vector[double] data
-        vector[double] coordinates
-        Matrix(const string& _name = "", unsigned int _index = 0)
-    
-    cdef enum Function_FunctionType:
-        Normal, Polar
-    
-    cdef cppclass Function:
-        string name
-        Function_FunctionType type
-        string formula
-        double begin
-        double end
-        int totalPoints
-        unsigned int index
-
-        Function(const string& _name = "", unsigned int _index = 0)
-
-    cdef cppclass TextBox:
-        string text
-        Rect clientRect
-        Color color
-        unsigned short fontSize
-        int rotation
-        int tab
-        BorderType borderType
-        Attach attach
-        TextBox(const string& _text = "")
-        TextBox(const string& _text, const Rect& _clientRect, const Color& _color, unsigned short _fontSize, int _rotation, int _tab, BorderType _borderType, Attach _attach)
-    
-    cdef cppclass PieProperties:
-        unsigned char viewAngle
-        unsigned char thickness
-        bool clockwiseRotation
-        short rotation
-        unsigned short radius
-        unsigned short horizontalOffset
-        unsigned long displacedSectionCount
-        unsigned short displacement
-        bool formatAutomatic
-        bool formatValues
-        bool formatPercentages
-        bool formatCategories
-        bool positionAssociate
-        unsigned short distance
-        PieProperties()
-    
-    cdef enum VectorProperties_VectorPosition:
-        Tail, Midpoint, Head
-    
-    cdef cppclass VectorProperties:
-        Color color
-        double width
-        unsigned short arrowLenght
-        unsigned char arrowAngle
-        bool arrowClosed
-        string endXColumnName
-        string endYColumnName
-        VectorProperties_VectorPosition position
-        string angleColumnName
-        string magnitudeColumnName
-        float multiplier
-        int constAngle
-        int constMagnitude
-        VectorProperties()
-
-    cdef enum TextProperties_Justify:
-        Left, Center, Right
-    
-    cdef cppclass TextProperties:
-        Color color
-        bool fontBold
-        bool fontItalic
-        bool fontUnderline
-        bool whiteOut
-        TextProperties_Justify justify
-        short rotation
-        short xOffset
-        short yOffset
-        unsigned short fontSize
-    
-    cdef enum SurfaceProperties_Type: # WTF, it is not used
-        ColorMap3D, ColorFill, WireFrame, Bars
-    cdef enum SurfaceProperties_Grids:
-        gNone "None", X, Y, XY
-    
-    cdef cppclass SurfaceProperties:
-        cppclass SurfaceColoration:
-            bool fill
-            bool contour
-            Color lineColor
-            double lineWidth
-        unsigned char type
-        SurfaceProperties_Grids grids
-        double gridLineWidth
-        Color gridColor
-        bool backColorEnabled
-        Color frontColor
-        Color backColor
-        bool sideWallEnabled
-        Color xSideWallColor
-        Color ySideWallColor
-        SurfaceColoration surface
-        SurfaceColoration topContour
-        SurfaceColoration bottomContour
-        ColorMap colorMap
-
-    cdef cppclass PercentileProperties:
-        unsigned char maxSymbolType
-        unsigned char p99SymbolType
-        unsigned char meanSymbolType
-        unsigned char p1SymbolType
-        unsigned char minSymbolType
-        Color symbolColor
-        Color symbolFillColor
-        unsigned short symbolSize
-        unsigned char boxRange
-        unsigned char whiskersRange
-        double boxCoeff
-        double whiskersCoeff
-        bool diamondBox
-    
-    # WTF, the following enums are not used
-    cdef enum GraphCurve_Plot:
-        pLine "Line" = 200, Scatter=201, LineSymbol=202, Column = 203, Area = 204, HiLoClose = 205, Box = 206,
-        ColumnFloat = 207, Vector = 208, PlotDot = 209, Wall3D = 210, Ribbon3D = 211, Bar3D = 212, ColumnStack = 213,
-        AreaStack = 214, Bar = 215, BarStack = 216, FlowVector = 218, Histogram = 219, MatrixImage = 220, Pie = 225,
-        Contour = 226, Unknown = 230, ErrorBar = 231, TextPlot = 232, XErrorBar = 233, SurfaceColorMap = 236,
-        SurfaceColorFill = 237, SurfaceWireframe = 238, SurfaceBars = 239, Line3D = 240, Text3D = 241, Mesh3D = 242,
-        XYZContour = 243, XYZTriangular = 245, LineSeries = 246, YErrorBar = 254, XYErrorBar = 255, GraphScatter3D = 0x8AF0,
-        GraphTrajectory3D = 0x8AF1, Polar = 0x00020000, SmithChart = 0x00040000, FillArea = 0x00800000
-    cdef enum GraphCurve_LineStyle:
-        Solid = 0, Dash = 1, Dot = 2, DashDot = 3, DashDotDot = 4, ShortDash = 5, ShortDot = 6, ShortDashDot = 7
-    cdef enum GraphCurve_LineConnect:
-        NoLine = 0, Straight = 1, TwoPointSegment = 2, ThreePointSegment = 3, BSpline = 8, Spline = 9,
-        StepHorizontal = 11, StepVertical = 12, StepHCenter = 13, StepVCenter = 14, Bezier = 15
-    
-    cdef cppclass GraphCurve:
-        unsigned char type
-        string dataName
-        string xColumnName
-        string yColumnName
-        string zColumnName
-        Color lineColor
-        unsigned char lineStyle
-        unsigned char lineConnect
-        unsigned char boxWidth
-        double lineWidth
-        bool fillArea
-        unsigned char fillAreaType
-        unsigned char fillAreaPattern
-        Color fillAreaColor
-        Color fillAreaPatternColor
-        double fillAreaPatternWidth
-        unsigned char fillAreaPatternBorderStyle
-        Color fillAreaPatternBorderColor
-        double fillAreaPatternBorderWidth
-        unsigned short symbolType
-        Color symbolColor
-        Color symbolFillColor
-        double symbolSize
-        unsigned char symbolThickness
-        unsigned char pointOffset
-        bool connectSymbols
-        PieProperties pie
-        VectorProperties vector
-        TextProperties text
-        SurfaceProperties surface
-        ColorMap colorMap
-
-    cdef cppclass GraphAxisBreak:
-        bool show
-        bool log10
-        double gabFrom "from"
-        double to
-        double position
-        double scaleIncrementBefore
-        double scaleIncrementAfter
-        unsigned char minorTicksBefore
-        unsigned char minorTicksAfter
-        GraphAxisBreak()
-
-    cdef cppclass GraphGrid:
-        bool hidden
-        unsigned char color
-        unsigned char style
-        double width
-
-    cdef cppclass GraphAxisFormat:
-        bool hidden
-        unsigned char color
-        double thickness
-        double majorTickLength
-        int majorTicksType
-        int minorTicksType
-        int axisPosition
-        double axisPositionValue
-        TextBox label
-        string prefix
-        string suffix
-
-    cdef cppclass GraphAxisTick:
-        bool hidden
-        unsigned char color
-        ValueType valueType
-        int valueTypeSpecification
-        int decimalPlaces
-        unsigned short fontSize
-        bool fontBold
-        string dataName
-        string columnName
-        int rotation
-
-    cdef enum GraphAxis_AxisPosition:
-        Left = 0, Bottom, Right, Top, Front, Back
-    cdef enum GraphAxis_Scale: # WTF, this enum is not used
-        Linear = 0, Log10 = 1, Probability = 2, Probit = 3, Reciprocal = 4,
-        OffsetReciprocal = 5, Logit = 6, Ln = 7, Log2 = 8
-    
-    cdef cppclass GraphAxis:
-        GraphAxis_AxisPosition position
-        double min
-        double max
-        double step
-        unsigned char majorTicks
-        unsigned char minorTicks
-        unsigned char scale
-        GraphGrid majorGrid
-        GraphGrid minorGrid
-        GraphAxisFormat *formatAxis # this is actually a size-2 array
-        GraphAxisTick *tickAxis # this is actually a size-2 array
-
-    cdef enum Figure_FigureType:
-        Rectangle, Circle
-    
-    cdef cppclass Figure:
-        Figure_FigureType type
-        Rect clientRect
-        Attach attach
-        Color color
-        unsigned char style
-        double width
-        Color fillAreaColor
-        unsigned char fillAreaPattern
-        Color fillAreaPatternColor
-        double fillAreaPatternWidth
-        bool useBorderColor
-        Figure(Figure_FigureType _type = Rectangle)
-
-    cdef cppclass LineVertex:
-        unsigned char shapeType
-        double shapeWidth
-        double shapeLength
-        double x
-        double y
-        LineVertex()
-
-    cdef cppclass Line:
-        Rect clientRect
-        Color color
-        Attach attach
-        double width
-        unsigned char style
-        LineVertex begin
-        LineVertex end
-
-    cdef cppclass Bitmap:
-        Rect clientRect
-        Attach attach
-        unsigned long size
-        string windowName
-        BorderType borderType
-        unsigned char* data
-        Bitmap(const string& _name = "")
-        Bitmap(const Bitmap& bitmap)
-
-    cdef cppclass ColorScale:
-        bool reverseOrder
-        unsigned short labelGap
-        unsigned short colorBarThickness
-        Color labelsColor
-
-    cdef cppclass GraphLayer:
-        Rect clientRect
-        TextBox legend
-        Color backgroundColor
-        BorderType borderType
-        GraphAxis xAxis
-        GraphAxis yAxis
-        GraphAxis zAxis
-        GraphAxisBreak xAxisBreak
-        GraphAxisBreak yAxisBreak
-        GraphAxisBreak zAxisBreak
-        double histogramBin
-        double histogramBegin
-        double histogramEnd
-        PercentileProperties percentile
-        ColorScale colorScale
-        vector[TextBox] texts
-        vector[TextBox] pieTexts
-        vector[Line] lines
-        vector[Figure] figures
-        vector[Bitmap] bitmaps
-        vector[GraphCurve] curves
-        float xLength
-        float yLength
-        float zLength
-        bool imageProfileTool
-        double vLine
-        double hLine
-        bool isXYY3D
-        GraphLayer()
-        #bool threeDimensional
-        bool is3D() const
-
-    cdef cppclass GraphLayerRange:
-        double min
-        double max
-        double step
-        GraphLayerRange(double _min = 0.0, double _max = 0.0, double _step = 0.0)
-
-    cdef cppclass Graph:
-        vector[GraphLayer] layers
-        unsigned short width
-        unsigned short height
-        bool is3D
-        bool isLayout
-        Graph(const string& _name = "")
-
-    cdef cppclass Note:
-        string text
-        Note(const string& _name = "")
-    
-    cdef enum ProjectNode_NodeType:
-        ntSpreadSheet "Spreadsheet", ntMatrix "Matrix", ntExcel "Excel",
-        ntGraph "Graph", ntGraph3D "Graph3D", ntNote "Note", ntFolder "Folder"
-    
-    cdef cppclass ProjectNode:
-        ProjectNode_NodeType type
-        string name
-        time_t creationDate
-        time_t modificationDate
-        ProjectNode(const string& _name = "", ProjectNode_NodeType _type = Folder, const time_t _creationDate = time(NULL), const time_t _modificationDate = time(NULL))
-
-cdef extern from "tree.hh":
-    cdef cppclass tree[T]:
-        pass
+cimport objects
+from objects cimport bool, string, vector, tree, tree_node, OriginFile
+cimport cython.operator
+from cython.operator import dereference as deref
+from PyQt4 import QtCore, QtGui
+Qt = QtCore.Qt
 
 ####################################################################################################
-###########################################            #############################################
-########################################## OriginFile.h ############################################
-##########################################             #############################################
+##########################################               ###########################################
+######################################### Object classes ###########################################
+#########################################               ############################################
 ####################################################################################################
-cdef extern from "OriginFile.h":
-    cdef cppclass OriginFile:
-        OriginFile(const string& fileName)
 
-        bool parse()
-        double version() const
-        
-        int spreadCount() const
-        int matrixCount() const
-        int functionCount() const
-        int graphCount() const
-        int noteCount() const
-        
-        SpreadSheet& spread(int s) const
-        Matrix& matrix(int m) const
-        Function& function(int f) const
-        Graph& graph(int g) const
-        Note& note(int n) const
-        
-        int functionIndex(const string& name) const
-        
-        const tree[ProjectNode]* project() const
+cdef class Window:
+    
+    cdef public string name, label
+    cdef public int objectID
+    cdef public bool hidden
+    cdef public int state, title # enums
+    cdef public object frameRect
+    cdef public long creationDate, modificationDate
+    
+    cdef void copy(self, const objects.Window *wnd):
+        self.name = wnd.name
+        self.label = wnd.label
+        self.objectID = wnd.objectID
+        self.hidden = wnd.hidden
+        self.state = <int>wnd.state
+        self.title = <int>wnd.title
+        self.frameRect = makeRect(wnd.frameRect)
+        self.creationDate = wnd.creationDate
+        self.modificationDate = wnd.modificationDate
+
+cdef class SpreadColumn:
+    
+    cdef public string name, command, comment
+    cdef public int type, valueType, numericDisplayType # enums
+    cdef public int valueTypeSpecification, significantDigits, decimalPlaces, width, index, sheet
+    cdef public object data
+    
+    cdef void copy(self, const objects.SpreadColumn *col):
+        cdef const double *doublePointer
+        cdef const string *stringPointer
+        cdef double doubleValue
+        cdef string stringValue
+        self.name = col.name
+        self.type = <int>col.type
+        self.valueType = <int>col.valueType
+        self.valueTypeSpecification = col.valueTypeSpecification
+        self.significantDigits = col.significantDigits
+        self.decimalPlaces = col.decimalPlaces
+        self.numericDisplayType = <int>col.numericDisplayType
+        self.command = col.command
+        self.comment = col.comment
+        self.width = col.width
+        self.index = col.index
+        self.sheet = col.sheet
+        self.data = []
+        # data copying is... umm... complicated.
+        # Because of FUCKING BOOST::VARIANT!11
+        dataSize = col.data.size()
+        for i in range(dataSize):
+            doublePointer = objects.getDoubleFromVariant(&(col.data[i]))
+            stringPointer = objects.getStringFromVariant(&(col.data[i]))
+            if doublePointer:
+                doubleValue = deref(doublePointer)
+                self.data.append(doubleValue)
+            else:
+                stringValue = deref(stringPointer)
+                self.data.append(stringValue)
+
+cdef class SpreadSheet(Window):
+    
+    cdef public int maxRows, sheets
+    cdef public bool loose, multisheet
+    cdef public object columns
+    
+    cdef void copy(self, const objects.Window *wnd):
+        Window.copy(self, wnd)
+        cdef const objects.SpreadSheet *sht = <objects.SpreadSheet*>wnd
+        self.maxRows = sht.maxRows
+        self.loose = sht.loose
+        self.multisheet = sht.multisheet
+        self.sheets = sht.sheets
+        self.columns = [makeSpreadColumn(sht.columns[i]) for i in xrange(sht.columns.size())]
+
+cdef class Note(Window):
+    
+    cdef public string text
+    
+    cdef void copy(self, const objects.Window *wnd):
+        Window.copy(self, wnd)
+        cdef const objects.Note *nt = <objects.Note*>wnd
+        self.text = nt.text
+
+cdef class ProjectNode:
+    
+    cdef public int type # enum
+    cdef public string name
+    cdef public int creationDate, modificationDate
+    
+    cdef void copy(self, const objects.ProjectNode *pn):
+        self.type = <int>pn.type
+        self.name = pn.name
+        self.creationDate = pn.creationDate
+        self.modificationDate = pn.modificationDate
+
+####################################################################################################
+##########################################              ############################################
+######################################### Object makers ############################################
+#########################################              #############################################
+####################################################################################################
+
+cdef makeColor(const objects.Color &clr):
+    if clr.cType == objects.ctRegular: # TODO: implement commented colors
+        return [Qt.black, Qt.red, Qt.green, Qt.blue, Qt.cyan, Qt.magenta, Qt.yellow, Qt.darkYellow,
+               "Qt.navy", "Qt.purple", "Qt.wine", "Qt.olive", Qt.darkCyan, "Qt.royal", "Qt.orange",
+               "Qt.violet", "Qt.pink", Qt.white, Qt.lightGray, Qt.gray, "Qt.lightYellow",
+               "Qt.lightCyan", "Qt.lightMagenta", Qt.darkGray][clr.custom[0]] # TODO: check which byte is used
+    elif clr.cType == objects.ctRGB:
+        return QtCore.QColor(clr.custom[0], clr.custom[1], clr.custom[2])
+    else: # TODO: other color objects
+        return QtCore.QColor()
+
+cdef makeRect(const objects.Rect &rect):
+    return QtCore.QRect(QtCore.QPoint(rect.left, rect.top), QtCore.QPoint(rect.right, rect.bottom))
+
+cdef makeSpreadColumn(const objects.SpreadColumn &col):
+    result = SpreadColumn()
+    result.copy(&col)
+    return result
+
+cdef makeSpreadSheet(const objects.SpreadSheet &sht):
+    print "Making spreadsheet..."
+    result = SpreadSheet()
+    result.copy(&sht)
+    return result
+
+cdef makeNote(const objects.Note &nt):
+    print "Making note..."
+    result = Note()
+    result.copy(&nt)
+    return result
+
+cdef makeProjectNode(const objects.ProjectNode &pn):
+    result = ProjectNode()
+    result.copy(&pn)
+    return result
+
+cdef makeTreeNode(tree_node[objects.ProjectNode] *nd):
+    cdef tree[objects.ProjectNode].leaf_iterator *it = new tree[objects.ProjectNode].leaf_iterator(nd)
+    cdef tree[objects.ProjectNode].iterator_base *tmp = new tree[objects.ProjectNode].iterator_base(nd)
+    numel = tmp.number_of_children()
+    del tmp
+    children = []
+    for i in xrange(numel):
+        child = makeProjectNode(deref(deref(it)))
+        print child.name
+        children.append(child)
+        cython.operator.preincrement(it)
+    del it
+    return children
+
+cdef makeTree(const tree[objects.ProjectNode] *tr):
+    cdef tree[objects.ProjectNode].pre_order_iterator it = tr.begin()
+    print "Going to pythonify tree with %d nodes." % tr.size()
+    return makeTreeNode(it.node)
+
+cdef getNodes(OriginFile *originFile):
+    spreadCount = originFile.spreadCount()
+    matrixCount = originFile.matrixCount()
+    functionCount = originFile.functionCount()
+    graphCount = originFile.graphCount()
+    noteCount = originFile.noteCount()
+    print spreadCount, matrixCount, functionCount, graphCount, noteCount
+    spreads   = [makeSpreadSheet(originFile.spread  (i)) for i in xrange(originFile.spreadCount())]
+    #matrices  = [originFile.matrix  (i) for i in xrange(originFile.matrixCount())]
+    #functions = [originFile.function(i) for i in xrange(originFile.spreadCount())]
+    #graphs    = [originFile.graph   (i) for i in xrange(originFile.graphCount ())]
+    notes     = [makeNote       (originFile.note    (i)) for i in xrange(originFile.noteCount  ())]
+    cdef const tree[objects.ProjectNode] *project = originFile.project()
+    tree = makeTree(project)
+    
+
+def parseOriginFile(filename):
+    cdef OriginFile *originFile = new OriginFile(filename)
+    result = originFile.parse()
+    getNodes(originFile)
+    return result
+
+
 
 

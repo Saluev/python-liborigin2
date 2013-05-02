@@ -147,6 +147,11 @@ namespace Origin
 	};
 
 	typedef boost::variant<double, string> variant;
+	/* Two following functions are necessary because
+	   Boost is way too difficult for Cython.
+	   BTW, I had to add new .cpp file for their implementation. :[ */
+	const double *getDoubleFromVariant(const variant *v);
+	const string *getStringFromVariant(const variant *v);
 
 	struct SpreadColumn
 	{

@@ -35,8 +35,8 @@
 #ifndef NO_CODE_GENERATION_FOR_LOG
 #define LOG_PRINT( logfile, args... ) \
 {                                     \
-	int ioret= fprintf(logfile, args); \
-	assert(ioret>0);                   \
+	/*int ioret=*/ fprintf(logfile, args); \
+	/*assert(ioret>0);*/                   \
 }
 #else // !NO_CODE_GENERATION_FOR_LOG
 #define LOG_PRINT( logfile, args... ) {};

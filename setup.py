@@ -12,7 +12,7 @@ except:
     sys.exit(1)
 
 
-src = ["liborigin.pyx",
+src = ["liborigin.pyx", "OriginObj.cpp",
        "opj2dat.cpp", "Origin750Parser.cpp", "OriginFile.cpp",
        "Origin600Parser.cpp", "Origin800Parser.cpp", "OriginParser.cpp",
        "Origin610Parser.cpp", "Origin810Parser.cpp",
