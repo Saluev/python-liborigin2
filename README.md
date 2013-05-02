@@ -8,15 +8,16 @@ It is based on the code at
 	http://soft.proindependent.com/liborigin2
 
 AUTHORS:  Stefan Gerlach, Ion Vasilief, Alex Kargovsky
+PYTHON WRAPPING: Tigran Saluev
 
 Dependencies
 ---------------------------------------------------------------------------
 To compile, liborigin (still) depends on
-		BOOST C++ libraries  http://www.boost.org/
+ * BOOST C++ libraries  http://www.boost.org/
 			boost/algorithm/string.hpp, boost/variant.hpp and its dependencies.
-		tree.hh (included) http://tree.phi-sci.com/
-		Note that the BOOST libraries are not needed at run time,
-		neither are linked in the executable.
+ * tree.hh (included) http://tree.phi-sci.com/
+
+Note that the BOOST libraries are not needed at run time, neither are linked in the executable.
 
 Compiling
 ---------------------------------------------------------------------------
@@ -30,12 +31,26 @@ to build .a liborigin2 library:
     $ cd build
     $ cmake ../
     $ make
-    $ make install
+    $ doxygen Doxyfile
     $ cd ..
+
+(You'll surely need Doxygen installed to build documentation.)
 
 To build Python module, just type
 
     $ python setup.py build_ext --inplace
+
+Python Usage
+---------------------------------------------------------------------------
+
+To get Origin project contents, simply use
+
+```python
+import liborigin
+file_contents = liborigin.parseOriginFile("my_awesome_project.opj")
+```
+
+(Rename the directory with liborigin.so to liborigin first.)
 
 Features
 ---------------------------------------------------------------------------
