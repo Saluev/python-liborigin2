@@ -682,19 +682,19 @@ cdef makeSpreadColumn(const objects.SpreadColumn &col):
 cdef makeSpreadSheet(const objects.SpreadSheet &sht):
     result = SpreadSheet()
     result.copy(&sht)
-    #print "Loading book #%d(%s/%s) (%d sheets, %d columns)" % (result.objectID, result.name, result.label.replace("\n", ""), result.sheets, len(result.columns))
+    print "Loading book #%d(%s/%s) (%d sheets, %d columns)" % (result.objectID, result.name, result.label.replace("\n", ""), result.sheets, len(result.columns))
     return result
 
 cdef makeMatrix(const objects.Matrix &mtx):
     result = Matrix()
     result.copy(&mtx)
-    #print "Loading matrix #%d(%s/%s)" % (result.objectID, result.name, result.label.replace("\n", ""))
+    print "Loading matrix #%d(%s/%s)" % (result.objectID, result.name, result.label.replace("\n", ""))
     return result
 
 cdef makeFunction(const objects.Function &f):
     result = Function()
     result.copy(&f)
-    #print "Loading function #%d(%d)" % (result.index, result.name)
+    print "Loading function #%d(%d)" % (result.index, result.name)
     return result
 
 cdef makeTextBox(const objects.TextBox &arg):
@@ -800,13 +800,13 @@ cdef makeGraphLayerRange(const objects.GraphLayerRange &arg):
 cdef makeGraph(const objects.Graph &arg):
     result = Graph()
     result.copy(&arg)
-    #print "Loading graph #%d(%s/%s) (%d layers, 3D: %s)" % (result.objectID, result.name, result.label.replace("\n", ""), len(result.layers), result.is3D)
+    print "Loading graph #%d(%s/%s) (%d layers, 3D: %s)" % (result.objectID, result.name, result.label.replace("\n", ""), len(result.layers), result.is3D)
     return result
 
 cdef makeNote(const objects.Note &nt):
     result = Note()
     result.copy(&nt)
-    #print "Loading note #%d(%s/%s)" % (result.objectID, result.name, result.label.replace("\n", ""))
+    print "Loading note #%d(%s/%s)" % (result.objectID, result.name, result.label.replace("\n", ""))
     return result
 
 cdef makeProjectNode(const objects.ProjectNode &pn):
@@ -830,7 +830,7 @@ cdef makeTreeNode(tree_node[objects.ProjectNode] *nd):
 
 cdef makeTree(const tree[objects.ProjectNode] *tr):
     cdef tree[objects.ProjectNode].pre_order_iterator it = tr.begin()
-    #print "Going to pythonify tree with %d nodes." % tr.size()
+    print "Going to pythonify tree with %d nodes." % tr.size()
     return makeTreeNode(it.node)
 
 
@@ -846,7 +846,7 @@ cdef getNodes(OriginFile *originFile):
     functionCount = originFile.functionCount()
     graphCount = originFile.graphCount()
     noteCount = originFile.noteCount()
-    #print spreadCount, matrixCount, functionCount, graphCount, noteCount
+    print spreadCount, matrixCount, functionCount, graphCount, noteCount
     spreads   = [makeSpreadSheet(originFile.spread  (i)) for i in xrange(spreadCount  )]
     matrices  = [makeMatrix     (originFile.matrix  (i)) for i in xrange(matrixCount  )]
     functions = [makeFunction   (originFile.function(i)) for i in xrange(functionCount)]
