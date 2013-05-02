@@ -1,0 +1,7 @@
+*.a
+*.so
+*.pyc
+*~
+liborigin.c
+liborigin.cpp
+build/*
