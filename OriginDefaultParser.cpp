@@ -63,7 +63,7 @@ OriginDefaultParser::OriginDefaultParser(const string& fileName)
 {
 }
 
-bool OriginDefaultParser::parse()
+bool OriginDefaultParser::parse(ProgressCallback callback, void *user_data)
 {
 	unsigned int i;
 	unsigned int ioret;  // return value of io functions

@@ -103,7 +103,6 @@ cdef enum ProjectNode_NodeType:
         ntSpreadSheet "Spreadsheet", ntMatrix "Matrix", ntExcel "Excel",
         ntGraph "Graph", ntGraph3D "Graph3D", ntNote "Note", ntFolder "Folder"
 
-
 cdef extern from "OriginObj.h" namespace "Origin":
     
     cdef enum ValueType:
@@ -516,6 +515,9 @@ cdef extern from "OriginObj.h" namespace "Origin":
         time_t modificationDate
         ProjectNode(const string& _name = "", ProjectNode_NodeType _type = Folder, const time_t _creationDate = time(NULL), const time_t _modificationDate = time(NULL))
 
+cdef extern from "OriginObj.h":
+    ctypedef void (*ProgressCallback)(double progress, void *user_data)
+
 ctypedef SurfaceProperties.SurfaceColoration SurfaceColoration
 
 ####################################################################################################
@@ -527,7 +529,7 @@ cdef extern from "OriginFile.h":
     cdef cppclass OriginFile:
         OriginFile(const string& fileName) nogil
 
-        bool parse() nogil
+        bool parse(ProgressCallback callback, void *user_data) nogil
         double version() const
         
         int spreadCount() const

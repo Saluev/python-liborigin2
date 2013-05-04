@@ -35,7 +35,7 @@ class Origin700Parser : public Origin610Parser
 {
 public:
 	Origin700Parser(const string& fileName);
-	bool parse();
+	bool parse(ProgressCallback callback = NULL, void *user_data = NULL);
 
 protected:
 	void readMatrixInfo();

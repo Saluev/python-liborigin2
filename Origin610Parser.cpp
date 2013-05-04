@@ -35,7 +35,7 @@ Origin610Parser::Origin610Parser(const string& fileName)
 	d_start_offset = 0x10 + 1;
 }
 
-bool Origin610Parser::parse()
+bool Origin610Parser::parse(ProgressCallback callback, void *user_data)
 {
 	unsigned int dataIndex = 0;
 

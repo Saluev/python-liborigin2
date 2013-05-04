@@ -39,8 +39,11 @@ Origin750Parser::Origin750Parser(const string& fileName)
 	windowsCount = 0;
 }
 
-bool Origin750Parser::parse()
+bool Origin750Parser::parse(ProgressCallback callback, void *user_data)
 {
+    file.callback = callback;
+    file.callback_user_data = user_data;    
+    
 	unsigned int dataIndex = 0;
 
 #ifndef NO_CODE_GENERATION_FOR_LOG

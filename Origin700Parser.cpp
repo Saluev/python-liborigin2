@@ -33,7 +33,7 @@ Origin700Parser::Origin700Parser(const string& fileName)
 :	Origin610Parser(fileName)
 {}
 
-bool Origin700Parser::parse()
+bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 {
 	unsigned int dataIndex = 0;
 

@@ -36,12 +36,24 @@ namespace std
 {
 	class iendianfstream : public ifstream
 	{
+	    
 	public:
+	    
+	    ProgressCallback callback;
+	    void *callback_user_data;
+	
 		iendianfstream(const char *_Filename, ios_base::openmode _Mode = ios_base::in)
-			:	ifstream(_Filename, _Mode)
+			:	ifstream(_Filename, _Mode), callback(NULL), callback_user_data(NULL)
 		{
 			short word = 0x4321;
 			bigEndian = (*(char*)& word) != 0x21;
+			
+			// get file size
+			ifstream tmp(_Filename, ios::binary | ios::ate);
+			size = tmp.tellg();
+			tmp.close();
+			
+			lastProgress = 0;
 		};
 
 		iendianfstream& operator>>(bool& value)
@@ -49,18 +61,21 @@ namespace std
 			char c;
 			get(c);
 			value = (c != 0);
+			tell();
 			return *this;
 		}
 
 		iendianfstream& operator>>(char& value)
 		{
 			get(value);
+			tell();
 			return *this;
 		}
 
 		iendianfstream& operator>>(unsigned char& value)
 		{
 			get(reinterpret_cast<char&>(value));
+			tell();
 			return *this;
 		}
 
@@ -70,6 +85,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -79,6 +95,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -88,6 +105,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -97,6 +115,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -106,6 +125,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -115,6 +135,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -124,6 +145,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -133,6 +155,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -142,6 +165,7 @@ namespace std
 			if(bigEndian)
 				swap_bytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 
+			tell();
 			return *this;
 		}
 
@@ -152,6 +176,7 @@ namespace std
 			if(pos != string::npos)
 				value.resize(pos);
 
+			tell();
 			return *this;
 		}
 
@@ -210,11 +235,13 @@ namespace std
 
 			}
 
+			tell();
 			return *this;
 		}
 
 	private:
 		bool bigEndian;
+		long size;
 		void swap_bytes(unsigned char* data, int size)
 		{
 			register int i = 0;
@@ -224,6 +251,23 @@ namespace std
 				std::swap(data[i], data[j]);
 				++i, --j;
 			}
+		}
+		int lastProgress;
+		inline void tell(void)
+		{
+		    long pos = tellg();
+		    if(callback && callback_user_data && pos % 10240 /*x 10KB*/ == 0)
+		    {
+		        double progress = pos / (double)size;
+		        int currProgress = 100 * progress;
+		        if(currProgress > lastProgress)
+		        {
+		            cout << "\rliborigin: " << currProgress << "% done  ";
+		            cout.flush();
+		            callback(0.9 * progress, callback_user_data);
+		        }
+		        lastProgress = currProgress;
+		    }
 		}
 	};
 }

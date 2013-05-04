@@ -42,7 +42,7 @@ class OriginFile
 public:
 	OriginFile(const string& fileName);
 
-	bool parse();																		//!< parse Origin file
+	bool parse(ProgressCallback callback = NULL, void *user_data = NULL);				//!< parse Origin file
 	double version() const;																//!< get version of Origin file
 
 	vector<Origin::SpreadSheet>::size_type spreadCount() const;							//!< get number of spreadsheets

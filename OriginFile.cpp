@@ -134,10 +134,10 @@ OriginFile::OriginFile(const string& fileName)
 	}
 }
 
-bool OriginFile::parse()
+bool OriginFile::parse(ProgressCallback callback, void *user_data)
 {
 	parser->setFileVersion(buildVersion);
-	return parser->parse();
+	return parser->parse(callback, user_data);
 }
 
 double OriginFile::version() const

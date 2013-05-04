@@ -46,7 +46,7 @@ class OriginParser
 {
 public:
 	virtual ~OriginParser() {};
-	virtual bool parse() = 0;
+	virtual bool parse(ProgressCallback = NULL, void* = NULL) = 0;
 	void setFileVersion(unsigned int version){fileVersion = version;};
 
 	vector<Origin::SpreadSheet>::difference_type findSpreadByName(const string& name) const;

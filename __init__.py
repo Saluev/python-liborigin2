@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from liborigin import *
+from liborigin import parseOriginFile

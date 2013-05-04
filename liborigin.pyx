@@ -577,12 +577,12 @@ cdef class GraphLayer:
         self.hLine = arg.hLine
         self.percentile = makePercentileProperties(arg.percentile)
         self.colorScale = makeColorScale(arg.colorScale)
-        self.texts = [makeTextBox(arg.texts[i]) for i in xrange(arg.texts.size())]
-        self.pieTexts = [makeTextBox(arg.pieTexts[i]) for i in xrange(arg.pieTexts.size())]
-        self.lines = [makeLine(arg.lines[i]) for i in xrange(arg.lines.size())]
-        self.figures = [makeFigure(arg.figures[i]) for i in xrange(arg.figures.size())]
-        self.bitmaps = [makeBitmap(arg.bitmaps[i]) for i in xrange(arg.bitmaps.size())]
-        self.curves = [makeGraphCurve(arg.curves[i]) for i in xrange(arg.curves.size())]
+        self.texts    = [makeTextBox   (arg.texts[i]   ) for i in xrange(arg.texts.size()   )]
+        self.pieTexts = [makeTextBox   (arg.pieTexts[i]) for i in xrange(arg.pieTexts.size())]
+        self.lines    = [makeLine      (arg.lines[i]   ) for i in xrange(arg.lines.size()   )]
+        self.figures  = [makeFigure    (arg.figures[i] ) for i in xrange(arg.figures.size() )]
+        self.bitmaps  = [makeBitmap    (arg.bitmaps[i] ) for i in xrange(arg.bitmaps.size() )]
+        self.curves   = [makeGraphCurve(arg.curves[i]  ) for i in xrange(arg.curves.size()  )]
         self.imageProfileTool = arg.imageProfileTool
         self.isXYY3D = arg.isXYY3D
 
@@ -840,18 +840,50 @@ cdef makeTree(const tree[objects.ProjectNode] *tr):
 ######################################                 #############################################
 ####################################################################################################
 
-cdef getNodes(OriginFile *originFile):
+cdef void cProgressCallback(double progress, void *user_data):
+    pyProgressCallback = <object>user_data
+    if pyProgressCallback:
+        pyProgressCallback(float(progress))
+
+
+cdef void tell(int &objCount, int &objHandled, void *callback):
+        cython.operator.preincrement(objHandled)
+        if callback != NULL:
+            pyCallback = <object>callback
+            pyCallback(0.9 + 0.1 * (objHandled / float(objCount)))
+
+cdef getNodes(OriginFile *originFile, pyCallback):
+    
+    print "Origin file version: %g" % originFile.version()
+    
     spreadCount = originFile.spreadCount()
     matrixCount = originFile.matrixCount()
     functionCount = originFile.functionCount()
     graphCount = originFile.graphCount()
     noteCount = originFile.noteCount()
     print spreadCount, matrixCount, functionCount, graphCount, noteCount
-    spreads   = [makeSpreadSheet(originFile.spread  (i)) for i in xrange(spreadCount  )]
+    cdef int objectsCount = spreadCount + matrixCount + functionCount + graphCount + noteCount
+    cdef int objectsHandled = 0
+    
+    spreads, matrices, functions, graphs, notes = [], [], [], [], []
+    for i in xrange(spreadCount):
+        spreads.append(makeSpreadSheet(originFile.spread(i)))
+        tell(objectsCount, objectsHandled, <void*>pyCallback)
     matrices  = [makeMatrix     (originFile.matrix  (i)) for i in xrange(matrixCount  )]
+    objectsHandled += matrixCount
     functions = [makeFunction   (originFile.function(i)) for i in xrange(functionCount)]
-    graphs    = [makeGraph      (originFile.graph   (i)) for i in xrange(graphCount   )]
+    objectsHandled += functionCount
+    for i in xrange(graphCount):
+        graphs.append(makeGraph(originFile.graph(i)))
+        tell(objectsCount, objectsHandled, <void*>pyCallback)
     notes     = [makeNote       (originFile.note    (i)) for i in xrange(noteCount    )]
+    objectsHandled += noteCount
+    
+    #spreads   = [makeSpreadSheet(originFile.spread  (i)) for i in xrange(spreadCount  )]
+    #matrices  = [makeMatrix     (originFile.matrix  (i)) for i in xrange(matrixCount  )]
+    #functions = [makeFunction   (originFile.function(i)) for i in xrange(functionCount)]
+    #graphs    = [makeGraph      (originFile.graph   (i)) for i in xrange(graphCount   )]
+    #notes     = [makeNote       (originFile.note    (i)) for i in xrange(noteCount    )]
     #cdef const tree[objects.ProjectNode] *project = originFile.project()
     #tree = makeTree(project)
     return {'functions': functions,
@@ -861,11 +893,12 @@ cdef getNodes(OriginFile *originFile):
                 'notes': notes}
     
 
-def parseOriginFile(filename):
-    cdef OriginFile *originFile = new OriginFile(filename)
-    result = originFile.parse()
-    getNodes(originFile)
-    return result
+def parseOriginFile(filename, pyCallback=None):
+    cdef OriginFile *originFile = new OriginFile(str(filename))
+    cdef objects.ProgressCallback cCallback = cProgressCallback
+    cdef void *pyCallbackPtr = <void*>pyCallback
+    result = originFile.parse(cCallback, pyCallbackPtr) # FIXME: something is wrong here
+    return result and getNodes(originFile, pyCallback)
 
 
 

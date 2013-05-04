@@ -38,7 +38,7 @@ class OriginDefaultParser : public OriginParser
 {
 public:
 	OriginDefaultParser(const string& fileName);
-	bool parse();
+	bool parse(ProgressCallback callback = NULL, void *user_data = NULL);
 
 private:
 	string fileName;

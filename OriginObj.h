@@ -42,6 +42,9 @@ using namespace std;
 
 namespace Origin
 {
+
+    typedef void (*ParsingProgressCallback)(double progress, void *user_data);
+
 	enum ValueType {Numeric = 0, Text = 1, Time = 2, Date = 3,  Month = 4, Day = 5, ColumnHeading = 6, TickIndexedDataset = 7, TextNumeric = 9, Categorical = 10};
 	enum NumericDisplayType {DefaultDecimalDigits = 0, DecimalPlaces = 1, SignificantDigits = 2};
 	enum Attach {Frame = 0, Page = 1, Scale = 2};
@@ -765,6 +768,8 @@ namespace Origin
 		{};
 	};
 }
+
+typedef Origin::ParsingProgressCallback ProgressCallback;
 
 
 

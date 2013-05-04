@@ -35,7 +35,7 @@ class Origin800Parser : public Origin750Parser
 {
 public:
 	Origin800Parser(const string& fileName);
-	bool parse();
+	bool parse(ProgressCallback callback = NULL, void *user_data = NULL);
 
 protected:
 	void readSpreadInfo();
