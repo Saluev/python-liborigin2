@@ -17,6 +17,7 @@ To compile, liborigin (still) depends on
  * BOOST C++ libraries  http://www.boost.org/
 			boost/algorithm/string.hpp, boost/variant.hpp and its dependencies.
  * tree.hh (included) http://tree.phi-sci.com/
+ * latest version of Cython http://cython.org/
 
 Note that the BOOST libraries are not needed at run time, neither are linked in the executable.
 

@@ -3,8 +3,8 @@ cimport objects
 from objects cimport bool, string, vector, pair, tree, tree_node, OriginFile
 cimport cython.operator
 from cython.operator import dereference as deref
-from PyQt4 import QtCore, QtGui
-Qt = QtCore.Qt
+#from PyQt4 import QtCore, QtGui
+#Qt = QtCore.Qt
 
 ####################################################################################################
 ##########################################               ###########################################
