@@ -7,8 +7,8 @@ try:
     from Cython.Distutils import build_ext
     from Cython.Build import cythonize
 except:
-    print "You don't seem to have Cython installed. Please get a"
-    print "copy from http://cython.org and install it"
+    print("You don't seem to have Cython installed. Please get a")
+    print("copy from http://cython.org and install it")
     sys.exit(1)
 
 
