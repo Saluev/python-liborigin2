@@ -682,13 +682,13 @@ cdef makeSpreadColumn(const objects.SpreadColumn &col):
 cdef makeSpreadSheet(const objects.SpreadSheet &sht):
     result = SpreadSheet()
     result.copy(&sht)
-    print "Loading book #%d(%s/%s) (%d sheets, %d columns)" % (result.objectID, result.name, result.label.replace("\n", ""), result.sheets, len(result.columns))
+    print "Loading book #%d(%s/%s) (%d sheets, %d columns)" % (result.objectID, result.name, result.label.replace(b"\n", b""), result.sheets, len(result.columns))
     return result
 
 cdef makeMatrix(const objects.Matrix &mtx):
     result = Matrix()
     result.copy(&mtx)
-    print "Loading matrix #%d(%s/%s)" % (result.objectID, result.name, result.label.replace("\n", ""))
+    print "Loading matrix #%d(%s/%s)" % (result.objectID, result.name, result.label.replace(b"\n", b""))
     return result
 
 cdef makeFunction(const objects.Function &f):
@@ -800,13 +800,13 @@ cdef makeGraphLayerRange(const objects.GraphLayerRange &arg):
 cdef makeGraph(const objects.Graph &arg):
     result = Graph()
     result.copy(&arg)
-    print "Loading graph #%d(%s/%s) (%d layers, 3D: %s)" % (result.objectID, result.name, result.label.replace("\n", ""), len(result.layers), result.is3D)
+    print "Loading graph #%d(%s/%s) (%d layers, 3D: %s)" % (result.objectID, result.name, result.label.replace(b"\n", b""), len(result.layers), result.is3D)
     return result
 
 cdef makeNote(const objects.Note &nt):
     result = Note()
     result.copy(&nt)
-    print "Loading note #%d(%s/%s)" % (result.objectID, result.name, result.label.replace("\n", ""))
+    print "Loading note #%d(%s/%s)" % (result.objectID, result.name, result.label.replace(b"\n", b""))
     return result
 
 cdef makeProjectNode(const objects.ProjectNode &pn):
@@ -894,10 +894,10 @@ cdef getNodes(OriginFile *originFile, pyCallback):
     
 
 def parseOriginFile(filename, pyCallback=None):
-    cdef OriginFile *originFile = new OriginFile(str(filename))
+    cdef OriginFile *originFile = new OriginFile(str.encode(filename))
     cdef objects.ProgressCallback cCallback = cProgressCallback
     cdef void *pyCallbackPtr = <void*>pyCallback
-    result = originFile.parse(cCallback, pyCallbackPtr) # FIXME: something is wrong here
+    result = originFile.parse(cCallback, pyCallbackPtr)
     return result and getNodes(originFile, pyCallback)
 
 
