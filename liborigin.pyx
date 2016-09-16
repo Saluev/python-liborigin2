@@ -897,7 +897,7 @@ def parseOriginFile(filename, pyCallback=None):
     cdef OriginFile *originFile = new OriginFile(str.encode(filename))
     cdef objects.ProgressCallback cCallback = cProgressCallback
     cdef void *pyCallbackPtr = <void*>pyCallback
-    result = originFile.parse(cCallback, pyCallbackPtr)
+    result = originFile.parse(cCallback, pyCallbackPtr) # FIXME: something is wrong here
     return result and getNodes(originFile, pyCallback)
 
 
