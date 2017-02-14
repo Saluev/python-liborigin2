@@ -42,8 +42,11 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
     file.callback = callback;
     file.callback_user_data = user_data;    
     
-	if (fileVersion >= 2882)
+	if (fileVersion > 3076) {
+		d_colormap_offset = 0x261;
+	} else if (fileVersion >= 2881) {
 		d_colormap_offset = 0x25F;
+	}
 
 	unsigned int dataIndex = 0;
 
@@ -1959,19 +1962,19 @@ void Origin800Parser::readGraphInfo()
 
 		file.seekg(LAYER, ios_base::beg);
 		size = readGraphAxisInfo(layer.xAxis);
-		LAYER += (size-6)*6;
+		if (size > 6) LAYER += size*6;
 
 		LAYER += 0x5;
 
 		file.seekg(LAYER, ios_base::beg);
 		readGraphAxisInfo(layer.yAxis);
-		LAYER += (size-6)*6;
+		if (size > 6) LAYER += size*6;
 
 		LAYER += 0x5;
 
 		file.seekg(LAYER, ios_base::beg);
 		readGraphAxisInfo(layer.zAxis);
-		LAYER += (size-6)*6;
+		if (size > 6) LAYER += size*6;
 
 		LAYER += 0x5;
 
@@ -1996,6 +1999,15 @@ void Origin800Parser::skipObjectInfo()
 		skipLine();
 		file >> size;
 		POS = file.tellg();
+	}
+
+	/* skipObjectInfo is used to skip reading unused bytes at the end of
+	  a spreadsheet (readSpreadInfo) or a matrix (readMatrix)
+	  The amount to skip depends on Origin file version.
+	 */
+	if (fileVersion >= 2876) {
+		file.seekg(-4, ios_base::cur);
+		return;
 	}
 
 	unsigned int nextSize = size;
