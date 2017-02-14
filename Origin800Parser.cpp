@@ -34,6 +34,7 @@ Origin800Parser::Origin800Parser(const string& fileName)
 	d_colormap_offset = 0x25B;
 	d_start_offset = 0x10 + 1;
 	notes_pos_mark = "H";
+	windowsCount = 0;
 }
 
 bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
