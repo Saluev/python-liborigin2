@@ -44,12 +44,14 @@ bool Origin610Parser::parse(ProgressCallback callback, void *user_data)
 	logfile = fopen("opjfile.log","a");
 #endif // NO_CODE_GENERATION_FOR_LOG
 	// get length of file:
-	file.seekg (0, ios::end);
+	file.seekg(0, ios_base::end);
 	d_file_size = file.tellg();
+	file.seekg(0, ios_base::beg);
 
 	unsigned char c;
 	/////////////////// find column ///////////////////////////////////////////////////////////
-	file.seekg(d_start_offset, ios_base::beg);
+	skipLine(); // magic CPYA and fileversion and buildno end with '#\n'
+
 	unsigned int size;
 	file >> size;
 	file.seekg(1 + size + 1 + 5, ios_base::cur);
@@ -443,10 +445,13 @@ bool Origin610Parser::parse(ProgressCallback callback, void *user_data)
 	file.seekg(POS, ios_base::beg);
 	readResultsLog();
 
-	file.seekg(1 + 4*5 + 0x10 + 1, ios_base::cur);
-	try {
-		readProjectTree();
-	} catch(...) {}
+	POS = file.tellg();
+	if (POS<d_file_size) {
+		file.seekg(1 + 4*5 + 0x10 + 1, ios_base::cur);
+		try {
+			readProjectTree();
+		} catch(...) {}
+	}
 
 	LOG_PRINT(logfile, "Done parsing\n")
 #ifndef NO_CODE_GENERATION_FOR_LOG
@@ -460,8 +465,10 @@ void Origin610Parser::readNotes()
 {
 	unsigned int pos = findStringPos("@");
 	// if we are at end of file don't try to read a Note
-	if (!(pos < d_file_size))
+	if (file.eof()) {
+		file.clear();
 		return;
+	}
 	file.seekg(pos, ios_base::beg);
 
 	unsigned int sectionSize;
@@ -562,8 +569,12 @@ void Origin610Parser::readNotes()
 void Origin610Parser::readResultsLog()
 {
 	int pos = findStringPos("ResultsLog");
-	if (pos < 0)
+	// if we are at end of file don't try to read ResultsLog
+	if (file.eof()) {
+		file.clear();
+		resultsLog = "None";
 		return;
+	}
 
 	file.seekg(pos + 12, ios_base::beg);
 	unsigned int size;
