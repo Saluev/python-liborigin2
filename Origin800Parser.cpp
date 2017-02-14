@@ -71,7 +71,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 	unsigned int colpos = file.tellg();
 	unsigned int current_col = 1, nr = 0, nbytes = 0;
 
-	while(size > 0 && size <= 0x8C){// should be 0x72, 0x73 or 0x83 ?
+	while(size > 0 && size <= 0x93){// should be 0x72, 0x73 or 0x83 ?
 		//////////////////////////////// COLUMN HEADER /////////////////////////////////////////////
 
 		short data_type;
