@@ -34,6 +34,7 @@ Origin810Parser::Origin810Parser(const string& fileName)
 	d_colormap_offset = 0x25F;
 	d_start_offset = 0x10;
 	notes_pos_mark = "P";
+	windowsCount = 0;
 }
 
 void Origin810Parser::readProjectTreeFolder(tree<ProjectNode>::iterator parent)
@@ -74,6 +75,8 @@ void Origin810Parser::readProjectTreeFolder(tree<ProjectNode>::iterator parent)
 
 	unsigned int objectcount;
 	file >> objectcount;
+
+	windowsCount += objectcount;
 
 	POS += 5 + 5;
 

@@ -34,6 +34,7 @@ Origin800Parser::Origin800Parser(const string& fileName)
 	d_colormap_offset = 0x25B;
 	d_start_offset = 0x10 + 1;
 	notes_pos_mark = "H";
+	windowsCount = 0;
 }
 
 bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
@@ -41,8 +42,11 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
     file.callback = callback;
     file.callback_user_data = user_data;    
     
-	if (fileVersion >= 2882)
+	if (fileVersion > 3076) {
+		d_colormap_offset = 0x261;
+	} else if (fileVersion >= 2881) {
 		d_colormap_offset = 0x25F;
+	}
 
 	unsigned int dataIndex = 0;
 
@@ -51,12 +55,13 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 	logfile = fopen("opjfile.log","a");
 #endif // NO_CODE_GENERATION_FOR_LOG
 	// get length of file:
-	file.seekg (0, ios::end);
+	file.seekg(0, ios_base::end);
 	d_file_size = file.tellg();
+	file.seekg(0, ios_base::beg);
 
 	unsigned char c;
 	/////////////////// find column ///////////////////////////////////////////////////////////
-	file.seekg(d_start_offset, ios_base::beg);
+	skipLine(); // magic CPYA and fileversion and buildno end with '#\n'
 	unsigned int size;
 	file >> size;
 	file.seekg(1 + size + 1 + 5, ios_base::cur);
@@ -69,7 +74,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 	unsigned int colpos = file.tellg();
 	unsigned int current_col = 1, nr = 0, nbytes = 0;
 
-	while(size > 0 && size <= 0x8C){// should be 0x72, 0x73 or 0x83 ?
+	while(size > 0 && size <= 0x93){// should be 0x72, 0x73 or 0x83 ?
 		//////////////////////////////// COLUMN HEADER /////////////////////////////////////////////
 
 		short data_type;
@@ -457,10 +462,12 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 	file.seekg(POS, ios_base::beg);
 	readResultsLog();
 
-	file.seekg(1 + 4*5 + 0x10 + 1, ios_base::cur);
-	try {
-		readProjectTree();
-	} catch(...) {}
+	if (POS<d_file_size) {
+		file.seekg(1 + 4*5 + 0x10 + 1, ios_base::cur);
+		try {
+			readProjectTree();
+		} catch(...) {}
+	}
 
 	LOG_PRINT(logfile, "Done parsing\n")
 #ifndef NO_CODE_GENERATION_FOR_LOG
@@ -474,8 +481,11 @@ void Origin800Parser::readNotes()
 {
 	unsigned int pos = findStringPos(notes_pos_mark);
 	// if we are at end of file don't try to read a Note
-	if (!(pos < d_file_size))
+	if (file.eof()) {
+		file.clear();
 		return;
+	}
+
 	file.seekg(pos, ios_base::beg);
 
 	unsigned int sectionSize;
@@ -577,8 +587,12 @@ void Origin800Parser::readNotes()
 void Origin800Parser::readResultsLog()
 {
 	int pos = findStringPos("ResultsLog");
-	if (pos < 0)
+	// if we are at end of file don't try to read ResultsLog
+	if (file.eof()) {
+		file.clear();
+		resultsLog = "None";
 		return;
+	}
 
 	file.seekg(pos + 12, ios_base::beg);
 	unsigned int size;
@@ -1172,12 +1186,24 @@ void Origin800Parser::readGraphInfo()
 		file.seekg(LAYER + 0x105, ios_base::beg);
 		file >> layer.backgroundColor;
 
-		LAYER += 0x12D + 0x1 + 40;
+		LAYER -= 0x05;
+		file.seekg(LAYER, ios_base::beg);
+		file >> size;
+		LAYER += size + 0x1 + 0x05;
+		file.seekg(LAYER, ios_base::beg);
 		//now structure is next : section_header_size=0x6F(4 bytes) + '\n' + section_header(0x6F bytes) + section_body_1_size(4 bytes) + '\n' + section_body_1 + section_body_2_size(maybe=0)(4 bytes) + '\n' + section_body_2 + '\n'
 		//possible sections: axes, legend, __BC02, _202, _231, _232, __LayerInfoStorage etc
 		//section name starts with 0x46 position
 		while(LAYER < d_file_size)
 		{
+			// get section header size
+			file.seekg(LAYER, ios_base::beg);
+			file >> size;
+			file.seekg(1, ios_base::cur);
+			if (size == 0) {
+				LOG_PRINT(logfile, "			No more SECTIONS at (@ 0x%X), size %d\n", LAYER, size)
+				break;
+			}
 			//section_header_size=0x6F(4 bytes) + '\n'
 			LAYER += 0x5;
 
@@ -1206,7 +1232,7 @@ void Origin800Parser::readGraphInfo()
 			file >> color;
 
 			//section_body_1_size
-			LAYER += 0x6F + 0x1;
+			LAYER += size + 0x01;
 			file.seekg(LAYER, ios_base::beg);
 			file >> size;
 
@@ -1553,9 +1579,6 @@ void Origin800Parser::readGraphInfo()
 
 			//close section 00 00 00 00 0A
 			LAYER += size + (size > 0 ? 0x1 : 0);
-
-			if(sec_name == "__LayerInfoStorage")
-				break;
 
 		}
 		LAYER += 0x5;
@@ -1939,19 +1962,19 @@ void Origin800Parser::readGraphInfo()
 
 		file.seekg(LAYER, ios_base::beg);
 		size = readGraphAxisInfo(layer.xAxis);
-		LAYER += size*0x6;
+		if (size > 6) LAYER += size*6;
 
 		LAYER += 0x5;
 
 		file.seekg(LAYER, ios_base::beg);
 		readGraphAxisInfo(layer.yAxis);
-		LAYER += size*0x6;
+		if (size > 6) LAYER += size*6;
 
 		LAYER += 0x5;
 
 		file.seekg(LAYER, ios_base::beg);
 		readGraphAxisInfo(layer.zAxis);
-		LAYER += size*0x6;
+		if (size > 6) LAYER += size*6;
 
 		LAYER += 0x5;
 
@@ -1976,6 +1999,15 @@ void Origin800Parser::skipObjectInfo()
 		skipLine();
 		file >> size;
 		POS = file.tellg();
+	}
+
+	/* skipObjectInfo is used to skip reading unused bytes at the end of
+	  a spreadsheet (readSpreadInfo) or a matrix (readMatrix)
+	  The amount to skip depends on Origin file version.
+	 */
+	if (fileVersion >= 2876) {
+		file.seekg(-4, ios_base::cur);
+		return;
 	}
 
 	unsigned int nextSize = size;

@@ -97,7 +97,11 @@ OriginFile::OriginFile(const string& fileName)
 #endif // NO_CODE_GENERATION_FOR_LOG
 		throw std::logic_error("Unknown project version");
 	}
-	LOG_PRINT(logfile, "Found project version %.2f\n", fileVersion/100.0)
+	if (fileVersion==810) {
+		LOG_PRINT(logfile, "Found project version 8.1 or newer\n")
+	} else {
+		LOG_PRINT(logfile, "Found project version %.2f\n", fileVersion/100.0)
+	}
 	// Close logfile, will be reopened in parser routine.
 	// There are ways to keep logfile open and pass it to parser routine,
 	// but I choose to do the same as with 'file', close it and reopen in 'parse'

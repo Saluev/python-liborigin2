@@ -51,12 +51,13 @@ bool Origin750Parser::parse(ProgressCallback callback, void *user_data)
 	logfile = fopen("opjfile.log","a");
 #endif // NO_CODE_GENERATION_FOR_LOG
 	// get length of file:
-	file.seekg (0, ios::end);
+	file.seekg(0, ios_base::end);
 	d_file_size = file.tellg();
+	file.seekg(0, ios_base::beg);
 
 	unsigned char c;
 	/////////////////// find column ///////////////////////////////////////////////////////////
-	file.seekg(0x10 + 1, ios_base::beg);
+	skipLine(); // magic CPYA and fileversion and buildno end with '#\n'
 	unsigned int size;
 	file >> size;
 	file.seekg(1 + size + 1 + 5, ios_base::cur);
@@ -608,6 +609,14 @@ void Origin750Parser::readSpreadInfo()
 		//section name(column name in formula case) starts with 0x46 position
 		while(1)
 		{
+			// get section header size
+			file.seekg(LAYER, ios_base::beg);
+			file >> size;
+			file.seekg(1, ios_base::cur);
+			if (size == 0) {
+				LOG_PRINT(logfile, "			No more SECTIONS at (@ 0x%X), size %d\n", LAYER, size)
+				break;
+			}
 			//section_header_size=0x6F(4 bytes) + '\n'
 			LAYER += 0x5;
 
@@ -644,9 +653,6 @@ void Origin750Parser::readSpreadInfo()
 
 			//close section 00 00 00 00 0A
 			LAYER += size + (size > 0 ? 0x1 : 0) + 0x5;
-
-			if(sec_name == "__LayerInfoStorage")
-				break;
 
 		}
 		LAYER += 0x5;
@@ -827,6 +833,14 @@ void Origin750Parser::readExcelInfo()
 		//section name(column name in formula case) starts with 0x46 position
 		while(1)
 		{
+			// get section header size
+			file.seekg(LAYER, ios_base::beg);
+			file >> size;
+			file.seekg(1, ios_base::cur);
+			if (size == 0) {
+				LOG_PRINT(logfile, "			No more SECTIONS at (@ 0x%X), size %d\n", LAYER, size)
+				break;
+			}
 			//section_header_size=0x6F(4 bytes) + '\n'
 			LAYER += 0x5;
 
@@ -863,9 +877,6 @@ void Origin750Parser::readExcelInfo()
 
 			//close section 00 00 00 00 0A
 			LAYER += size + (size > 0 ? 0x1 : 0) + 0x5;
-
-			if(sec_name == "__LayerInfoStorage")
-				break;
 
 		}
 		LAYER += 0x5;
@@ -1064,6 +1075,14 @@ void Origin750Parser::readMatrixInfo()
 	//section name(column name in formula case) starts with 0x46 position
 	while(1)
 	{
+        // get section header size
+        file.seekg(LAYER, ios_base::beg);
+        file >> size;
+        file.seekg(1, ios_base::cur);
+        if (size == 0) {
+            LOG_PRINT(logfile, "			No more SECTIONS at (@ 0x%X), size %d\n", LAYER, size)
+            break;
+        }
 		//section_header_size=0x6F(4 bytes) + '\n'
 		LAYER += 0x5;
 
@@ -1120,9 +1139,6 @@ void Origin750Parser::readMatrixInfo()
 
 		//close section 00 00 00 00 0A
 		LAYER += size + (size > 0 ? 0x1 : 0) + 0x5;
-
-		if(sec_name == "__LayerInfoStorage")
-			break;
 
 	}
 	LAYER += 0x5;
@@ -1247,6 +1263,14 @@ void Origin750Parser::readGraphInfo()
 		//section name starts with 0x46 position
 		while(1)
 		{
+			// get section header size
+			file.seekg(LAYER, ios_base::beg);
+			file >> size;
+			file.seekg(1, ios_base::cur);
+			if (size == 0) {
+				LOG_PRINT(logfile, "			No more SECTIONS at (@ 0x%X), size %d\n", LAYER, size)
+				break;
+			}
 			//section_header_size=0x6F(4 bytes) + '\n'
 			LAYER += 0x5;
 
@@ -1625,9 +1649,6 @@ void Origin750Parser::readGraphInfo()
 
 			//close section 00 00 00 00 0A
 			LAYER += size + (size > 0 ? 0x1 : 0);
-
-			if(sec_name == "__LayerInfoStorage")
-				break;
 
 		}
 		LAYER += 0x5;

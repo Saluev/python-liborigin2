@@ -42,12 +42,13 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 	logfile = fopen("opjfile.log","a");
 #endif // NO_CODE_GENERATION_FOR_LOG
 	// get length of file:
-	file.seekg (0, ios::end);
+	file.seekg(0, ios_base::end);
 	d_file_size = file.tellg();
+	file.seekg(0, ios_base::beg);
 
 	unsigned char c;
 	/////////////////// find column ///////////////////////////////////////////////////////////
-	file.seekg(0x10 + 1, ios_base::beg);
+	skipLine(); // magic CPYA and fileversion and buildno end with '#\n'
 	unsigned int size;
 	file >> size;
 	file.seekg(1 + size + 1 + 5, ios_base::cur);
