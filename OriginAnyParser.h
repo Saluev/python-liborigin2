@@ -36,6 +36,9 @@ public:
 	bool parse(ProgressCallback callback = NULL, void *user_data = NULL);
 
 protected:
+	unsigned int readObjectSize();
+	string readObjectAsString(unsigned int);
+
 	iendianfstream file;
 	FILE *logfile;
 
