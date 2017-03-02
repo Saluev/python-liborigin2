@@ -31,6 +31,18 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	file.callback = callback;
 	file.callback_user_data = user_data;
 
+#ifndef NO_CODE_GENERATION_FOR_LOG
+	// append progress in log file
+	logfile = fopen("opjfile.log","a");
+#endif // NO_CODE_GENERATION_FOR_LOG
+
+	// get length of file:
+	file.seekg (0, ios_base::end);
+	d_file_size = file.tellg();
+	file.seekg(0, ios_base::beg);
+
+	LOG_PRINT(logfile, "File size: %d\n", d_file_size)
+
 	return true;
 }
 
