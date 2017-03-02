@@ -105,7 +105,8 @@ OriginFile::OriginFile(const string& fileName)
 #ifndef NO_CODE_GENERATION_FOR_LOG
 	fclose(logfile);
 #endif // NO_CODE_GENERATION_FOR_LOG
-	switch(fileVersion){
+	parser.reset(createOriginAnyParser(fileName));
+	/*switch(fileVersion){
 		case 810:
 			parser.reset(createOrigin810Parser(fileName));
 			break;
@@ -131,7 +132,7 @@ OriginFile::OriginFile(const string& fileName)
 		default:
 			parser.reset(createOriginDefaultParser(fileName));
 			break;
-	}
+	}*/
 }
 
 bool OriginFile::parse(ProgressCallback callback, void *user_data)

@@ -83,5 +83,6 @@ OriginParser* createOrigin700Parser(const string& fileName);
 OriginParser* createOrigin750Parser(const string& fileName);
 OriginParser* createOrigin800Parser(const string& fileName);
 OriginParser* createOrigin810Parser(const string& fileName);
+OriginParser* createOriginAnyParser(const string& fileName);
 
 #endif // ORIGIN_PARSER_H

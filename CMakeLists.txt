@@ -6,7 +6,7 @@ find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # library version
-set(LIBORIGIN_VERSION_MAJOR 2)
+set(LIBORIGIN_VERSION_MAJOR 3)
 set(LIBORIGIN_VERSION_MINOR 0)
 set(LIBORIGIN_VERSION_BUGFIX 0)
 
@@ -25,6 +25,7 @@ set (sources
 	Origin750Parser.cpp
 	Origin800Parser.cpp
 	Origin810Parser.cpp
+	OriginAnyParser.cpp
 	)
 
 # header files for development
