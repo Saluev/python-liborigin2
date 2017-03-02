@@ -43,6 +43,16 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 
 	LOG_PRINT(logfile, "File size: %d\n", d_file_size)
 
+	// get file and program version, check it is a valid file
+	string fileVersion;
+	getline(file, fileVersion);
+
+	if ((fileVersion.substr(0,4) != "CPYA") or (*fileVersion.rbegin() != '#')) {
+		LOG_PRINT(logfile, "File, is not a valid opj file")
+		exit(1);
+	}
+	LOG_PRINT(logfile, "File version string: %s\n", fileVersion.c_str())
+
 	return true;
 }
 
