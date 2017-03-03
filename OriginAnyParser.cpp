@@ -54,6 +54,16 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "Now at %d [0x%X]\n", curpos, curpos)
 
+	// get dataset list
+	unsigned int dataset_list_size = 0;
+
+	LOG_PRINT(logfile, "Reading Data sets ...\n")
+	while (true) {
+		if (!readDataSetElement()) break;
+		dataset_list_size++;
+	}
+	LOG_PRINT(logfile, " ... done. Data sets: %d\n", dataset_list_size)
+
 	return true;
 }
 
@@ -130,4 +140,55 @@ void OriginAnyParser::readGlobalHeader() {
 		LOG_PRINT(logfile, "Wrong end of list mark %d at %d [0x%X]\n", gh_endmark, (unsigned long)file.tellg(), (unsigned long)file.tellg())
 		exit(4);
 	}
+}
+
+bool OriginAnyParser::readDataSetElement() {
+	/* get info and values of a DataSet (worksheet column, matrix sheet, ...)
+	 * return true if a DataSet is found, otherwise return false */
+	unsigned int dse_header_size = 0, dse_data_size = 0, dse_mask_size = 0;
+	unsigned long curpos = 0, dsh_start = 0, dsd_start = 0, dsm_start = 0;
+	string dse_header;
+
+	dse_header_size = readObjectSize();
+	if (dse_header_size == 0) return false;
+
+	curpos = file.tellg();
+	dsh_start = curpos;
+	LOG_PRINT(logfile, "Column found: header size %d [0x%X], starts at %d [0x%X]: ", dse_header_size, dse_header_size, curpos, curpos)
+	dse_header = readObjectAsString(dse_header_size);
+
+	// get known info
+	string name(25,0);
+	name = dse_header.substr(0x58,25);
+	LOG_PRINT(logfile, "%s\n", name.c_str())
+
+	// go to end of dataset header, get data size
+	file.seekg(dsh_start+dse_header_size+1, ios_base::beg);
+	dse_data_size = readObjectSize();
+	dsd_start = file.tellg();
+	string dse_data = readObjectAsString(dse_data_size);
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "data size %d [0x%X], starts at %d [0x%X], ends at %d [0x%X]\n", dse_data_size, dse_data_size, dsd_start, dsd_start, curpos, curpos)
+
+	// get data values
+
+	// go to end of data values, get mask size (often zero)
+	file.seekg(dsd_start+dse_data_size+1, ios_base::beg);
+	dse_mask_size = readObjectSize();
+	dsm_start = file.tellg();
+	if (dse_mask_size > 0) LOG_PRINT(logfile, "mask size %d [0x%X], starts at %d [0x%X]", dse_mask_size, dse_mask_size, dsm_start, dsm_start)
+	string dse_mask = readObjectAsString(dse_mask_size);
+
+	// get mask values
+	if (dse_mask_size > 0) {
+		curpos = file.tellg();
+		LOG_PRINT(logfile, ", ends at %d [0x%X]\n", curpos, curpos)
+		// TODO: extract mask values from dse_mask
+		// go to end of dataset mask
+		file.seekg(dsm_start+dse_mask_size+1, ios_base::beg);
+	}
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "column ends at %d [0x%X]\n", curpos, curpos)
+
+	return true;
 }

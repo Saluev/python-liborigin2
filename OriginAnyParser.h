@@ -40,6 +40,7 @@ protected:
 	string readObjectAsString(unsigned int);
 	void readFileVersion();
 	void readGlobalHeader();
+	bool readDataSetElement();
 
 	iendianfstream file;
 	FILE *logfile;
