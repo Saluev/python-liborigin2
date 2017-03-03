@@ -444,3 +444,25 @@ bool OriginAnyParser::readCurveElement() {
 
 	return true;
 }
+
+bool OriginAnyParser::readAxisBreakElement() {
+	/* get info of Axis breaks
+	 * return true if an Axis break, otherwise return false */
+	unsigned int abe_data_size = 0;
+	unsigned long curpos = 0, abd_start = 0;
+
+	// get axis break data size
+	abe_data_size = readObjectSize();
+	if (abe_data_size == 0) return false;
+
+	curpos = file.tellg();
+	abd_start = curpos;
+	string abd_data = readObjectAsString(abe_data_size);
+
+	// get known info
+
+	// go to end of axis break data
+	file.seekg(abd_start+abe_data_size+1, ios_base::beg);
+
+	return true;
+}
