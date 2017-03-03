@@ -73,6 +73,19 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 		window_list_size++;
 	}
 	LOG_PRINT(logfile, " ... done. Windows: %d\n", window_list_size)
+	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
+
+	// get parameter list
+	unsigned int parameter_list_size = 0;
+
+	LOG_PRINT(logfile, "Reading Parameters ...\n")
+	while (true) {
+		if (!readParameterElement()) break;
+		parameter_list_size++;
+	}
+	LOG_PRINT(logfile, " ... done. Parameters: %d\n", parameter_list_size)
+	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
+
 
 	return true;
 }
@@ -488,6 +501,32 @@ bool OriginAnyParser::readAxisParameterElement(unsigned int naxis) {
 
 	// go to end of axis break data
 	file.seekg(apd_start+ape_data_size+1, ios_base::beg);
+
+	return true;
+}
+
+bool OriginAnyParser::readParameterElement() {
+	// get parameter name
+	unsigned int par_start = 0, curpos = 0;
+	string par_name;
+	char c;
+
+	par_start = file.tellg();
+	getline(file, par_name);
+	if (par_name[0] == '\0') {
+		unsigned int eof_parameters_mark = readObjectSize();
+		return false;
+	}
+	LOG_PRINT(logfile, " %s:", par_name.c_str())
+	double value;
+	file >> value;
+	LOG_PRINT(logfile, " %g\n", value)
+	// read the '\n'
+	file >> c;
+	if (c != '\n') {
+		LOG_PRINT(logfile, "Wrong delimiter %c at %d [0x%X]\n", c, (unsigned long)file.tellg(), (unsigned long)file.tellg())
+		exit(3);
+	}
 
 	return true;
 }

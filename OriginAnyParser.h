@@ -48,6 +48,7 @@ protected:
 	bool readCurveElement();
 	bool readAxisBreakElement();
 	bool readAxisParameterElement(unsigned int);
+	bool readParameterElement();
 
 	iendianfstream file;
 	FILE *logfile;
