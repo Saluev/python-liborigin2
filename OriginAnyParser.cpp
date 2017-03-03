@@ -81,7 +81,8 @@ string OriginAnyParser::readObjectAsString(unsigned int size) {
 		// get a string large enough to hold the result, initialize  it to all 0's
 		string blob = string(size, '\0');
 		// read data into that string
-		file >> blob;
+		// cannot use '>>' operator because iendianfstream truncates it at first '\0'
+		file.read(&blob[0], size);
 		// read the '\n'
 		file >> c;
 		if (c != '\n') {
