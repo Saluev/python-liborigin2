@@ -328,3 +328,85 @@ bool OriginAnyParser::readLayerElement() {
 
 	return true;
 }
+
+unsigned int OriginAnyParser::readAnnotationList() {
+	/* Purpose of this function is to allow recursive call for groups of annotation elements. */
+	unsigned int annotation_list_size = 0;
+
+	while (true) {
+		if (!readAnnotationElement()) break;
+		annotation_list_size++;
+	}
+	return annotation_list_size;
+}
+
+bool OriginAnyParser::readAnnotationElement() {
+	/* get general info and details of an Annotation
+	 * return true if an Annotation is found, otherwise return false */
+	unsigned int ane_header_size = 0;
+	unsigned long curpos = 0, anh_start = 0;
+
+	// get annotation header size
+	ane_header_size = readObjectSize();
+	if (ane_header_size == 0) return false;
+
+	curpos = file.tellg();
+	anh_start = curpos;
+	LOG_PRINT(logfile, "  Annotation found: header size %d [0x%X], starts at %d [0x%X]: ", ane_header_size, ane_header_size, curpos, curpos)
+	string ane_header = readObjectAsString(ane_header_size);
+
+	// get known info
+	string name(41,0);
+	name = ane_header.substr(0x46,41);
+	LOG_PRINT(logfile, "%s\n", name.c_str())
+
+	// go to end of annotation header
+	file.seekg(anh_start+ane_header_size+1, ios_base::beg);
+
+	// data of an annotation element is divided in three blocks
+	// first block
+	unsigned int ane_data_1_size = 0, andt1_start = 0;
+	ane_data_1_size = readObjectSize();
+
+	andt1_start = file.tellg();
+	string andt1_data = readObjectAsString(ane_data_1_size);
+
+	// TODO: get known info
+
+	// go to end of first data block
+	file.seekg(andt1_start+ane_data_1_size+1, ios_base::beg);
+
+	// second block
+	unsigned int ane_data_2_size = 0, andt2_start = 0;
+	ane_data_2_size = readObjectSize();
+	andt2_start = file.tellg();
+	string andt2_data;
+
+	// check for group of annotations
+	if ((ane_data_1_size == 0x5e) and (ane_data_2_size == 0x04)) {
+		unsigned int angroup_size = 0;
+		curpos = file.tellg();
+		LOG_PRINT(logfile, "Annotation group found at %d [0x%X] ...\n", curpos, curpos)
+		angroup_size = readAnnotationList();
+		curpos = file.tellg();
+		LOG_PRINT(logfile, "... group end at %d [0x%X]. Annotations: %d\n", curpos, curpos, angroup_size)
+		andt2_data = string("");
+	} else {
+		andt2_data = readObjectAsString(ane_data_2_size);
+		// TODO: get known info
+		// go to end of second data block
+		file.seekg(andt2_start+ane_data_2_size+1, ios_base::beg);
+	}
+
+	// third block
+	unsigned int ane_data_3_size = 0, andt3_start = 0;
+	ane_data_3_size = readObjectSize();
+
+	andt3_start = file.tellg();
+	string andt3_data = readObjectAsString(ane_data_3_size);
+
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "annotation ends at %d [0x%X]\n", curpos, curpos)
+
+	return true;
+}

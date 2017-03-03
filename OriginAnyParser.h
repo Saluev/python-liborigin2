@@ -44,6 +44,7 @@ protected:
 	bool readWindowElement();
 	bool readLayerElement();
 	unsigned int readAnnotationList();
+	bool readAnnotationElement();
 	bool readCurveElement();
 	bool readAxisBreakElement();
 	bool readAxisParameterElement(unsigned int);
