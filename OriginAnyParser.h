@@ -41,6 +41,12 @@ protected:
 	void readFileVersion();
 	void readGlobalHeader();
 	bool readDataSetElement();
+	bool readWindowElement();
+	bool readLayerElement();
+	unsigned int readAnnotationList();
+	bool readCurveElement();
+	bool readAxisBreakElement();
+	bool readAxisParameterElement(unsigned int);
 
 	iendianfstream file;
 	FILE *logfile;

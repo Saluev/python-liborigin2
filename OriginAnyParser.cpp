@@ -64,6 +64,16 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	}
 	LOG_PRINT(logfile, " ... done. Data sets: %d\n", dataset_list_size)
 
+	// get window list
+	unsigned int window_list_size = 0;
+
+	LOG_PRINT(logfile, "Reading Windows ...\n")
+	while (true) {
+		if (!readWindowElement()) break;
+		window_list_size++;
+	}
+	LOG_PRINT(logfile, " ... done. Windows: %d\n", window_list_size)
+
 	return true;
 }
 
@@ -189,6 +199,124 @@ bool OriginAnyParser::readDataSetElement() {
 	}
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "column ends at %d [0x%X]\n", curpos, curpos)
+
+	return true;
+}
+
+bool OriginAnyParser::readWindowElement() {
+	/* get general info and details of a window
+	 * return true if a Window is found, otherwise return false */
+	unsigned int wde_header_size = 0;
+	unsigned long curpos = 0, wdh_start = 0;
+
+	wde_header_size = readObjectSize();
+	if (wde_header_size == 0) return false;
+
+	curpos = file.tellg();
+	wdh_start = curpos;
+	LOG_PRINT(logfile, "Window found: header size %d [0x%X], starts at %d [0x%X]: ", wde_header_size, wde_header_size, curpos, curpos)
+	string wde_header = readObjectAsString(wde_header_size);
+
+	// get known info
+	string name(25,0);
+	name = wde_header.substr(0x02,25);
+	LOG_PRINT(logfile, "%s\n", name.c_str())
+
+	// go to end of window header
+	file.seekg(wdh_start+wde_header_size+1, ios_base::beg);
+
+	// get layer list
+	unsigned int layer_list_size = 0;
+
+	LOG_PRINT(logfile, " Reading Layers ...\n")
+	while (true) {
+		if (!readLayerElement()) break;
+		layer_list_size++;
+	}
+	LOG_PRINT(logfile, "  ... done. Layers: %d\n", layer_list_size)
+
+	return true;
+}
+
+bool OriginAnyParser::readLayerElement() {
+	/* get general info and details of a layer
+	 * return true if a Layer is found, otherwise return false */
+	unsigned int lye_header_size = 0;
+	unsigned long curpos = 0, lyh_start = 0;
+
+	lye_header_size = readObjectSize();
+	if (lye_header_size == 0) return false;
+
+	curpos = file.tellg();
+	lyh_start = curpos;
+	LOG_PRINT(logfile, "  Layer found: header size %d [0x%X], starts at %d [0x%X]: ", lye_header_size, lye_header_size, curpos, curpos)
+	string lye_header = readObjectAsString(lye_header_size);
+
+	// get known info
+	string name(25,0);
+	name = lye_header.substr(0x02,25);
+	LOG_PRINT(logfile, "%s\n", name.c_str())
+
+	// go to end of layer header
+	file.seekg(lyh_start+lye_header_size+1, ios_base::beg);
+
+	// get annotation list
+	unsigned int annotation_list_size = 0;
+
+	LOG_PRINT(logfile, " Reading Annotations ...\n")
+	/* Some annotations can be groups of annotations. We need a recursive function for those cases */
+	annotation_list_size = readAnnotationList();
+	LOG_PRINT(logfile, "  ... done. Annotations: %d\n", annotation_list_size)
+
+	// get curve list
+	unsigned int curve_list_size = 0;
+
+	LOG_PRINT(logfile, " Reading Curves ...\n")
+	while (true) {
+		if (!readCurveElement()) break;
+		curve_list_size++;
+	}
+	LOG_PRINT(logfile, "  ... done. Curves: %d\n", curve_list_size)
+
+	// get axisbreak list
+	unsigned int axisbreak_list_size = 0;
+
+	LOG_PRINT(logfile, " Reading Axis breaks ...\n")
+	while (true) {
+		if (!readAxisBreakElement()) break;
+		axisbreak_list_size++;
+	}
+	LOG_PRINT(logfile, "  ... done. Axis breaks: %d\n", axisbreak_list_size)
+
+	// get x axisparameter list
+	unsigned int axispar_x_list_size = 0;
+
+	LOG_PRINT(logfile, " Reading x-Axis parameters ...\n")
+	while (true) {
+		if (!readAxisParameterElement(1)) break;
+		axispar_x_list_size++;
+	}
+	LOG_PRINT(logfile, "  ... done. x-Axis parameters: %d\n", axispar_x_list_size)
+
+	// get y axisparameter list
+	unsigned int axispar_y_list_size = 0;
+
+	LOG_PRINT(logfile, " Reading y-Axis parameters ...\n")
+	while (true) {
+		if (!readAxisParameterElement(2)) break;
+		axispar_y_list_size++;
+	}
+	LOG_PRINT(logfile, "  ... done. y-Axis parameters: %d\n", axispar_y_list_size)
+
+	// get z axisparameter list
+	unsigned int axispar_z_list_size = 0;
+
+	LOG_PRINT(logfile, " Reading z-Axis parameters ...\n")
+	while (true) {
+		if (!readAxisParameterElement(3)) break;
+		axispar_z_list_size++;
+	}
+	LOG_PRINT(logfile, "  ... done. z-Axis parameters: %d\n", axispar_z_list_size)
 
 	return true;
 }
