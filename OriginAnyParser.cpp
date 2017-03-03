@@ -90,6 +90,25 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
 
+	// Note windows were added between version >4.141 and 4.210,
+	// i.e., with Release 5.0
+	if (curpos >= d_file_size) {
+		LOG_PRINT(logfile, "Now at end of file\n")
+		return true;
+	}
+
+	// get note windows list
+	unsigned int note_list_size = 0;
+
+	LOG_PRINT(logfile, "Reading Note windows ...\n")
+	while (true) {
+		if (!readNoteElement()) break;
+		note_list_size++;
+	}
+	LOG_PRINT(logfile, " ... done. Note windows: %d\n", note_list_size)
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
+
 	return true;
 }
 
@@ -531,6 +550,45 @@ bool OriginAnyParser::readParameterElement() {
 		LOG_PRINT(logfile, "Wrong delimiter %c at %d [0x%X]\n", c, (unsigned long)file.tellg(), (unsigned long)file.tellg())
 		exit(3);
 	}
+
+	return true;
+}
+
+bool OriginAnyParser::readNoteElement() {
+	/* get info of Note windows, including "Results Log"
+	 * return true if a Note window is found, otherwise return false */
+	unsigned int nwe_header_size = 0, nwe_label_size = 0, nwe_contents_size = 0;
+	unsigned long curpos = 0, nwh_start = 0, nwl_start = 0, nwc_start = 0;
+
+	// get note header size
+	nwe_header_size = readObjectSize();
+	if (nwe_header_size == 0) return false;
+
+	curpos = file.tellg();
+	nwh_start = curpos;
+	LOG_PRINT(logfile, "  Note window found: header size %d [0x%X], starts at %d [0x%X]\n", nwe_header_size, nwe_header_size, curpos, curpos)
+	string nwe_header = readObjectAsString(nwe_header_size);
+
+	// TODO: get known info from header
+
+	// go to end of header
+	file.seekg(nwh_start+nwe_header_size+1, ios_base::beg);
+
+	// get label size
+	nwe_label_size = readObjectSize();
+	nwl_start = file.tellg();
+	string nwe_label = readObjectAsString(nwe_label_size);
+	LOG_PRINT(logfile, "  label at %d [0x%X]: %s\n", nwl_start, nwl_start, nwe_label.c_str())
+
+	// go to end of label
+	file.seekg(nwl_start+nwe_label_size, ios_base::beg);
+	if (nwe_label_size > 0) file.seekg(1, ios_base::cur);
+
+	// get contents size
+	nwe_contents_size = readObjectSize();
+	nwc_start = file.tellg();
+	string nwe_contents = readObjectAsString(nwe_contents_size);
+	LOG_PRINT(logfile, "  contents at %d [0x%X]: \n%s\n", nwc_start, nwc_start, nwe_contents.c_str())
 
 	return true;
 }

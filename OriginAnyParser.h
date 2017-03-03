@@ -49,6 +49,7 @@ protected:
 	bool readAxisBreakElement();
 	bool readAxisParameterElement(unsigned int);
 	bool readParameterElement();
+	bool readNoteElement();
 
 	iendianfstream file;
 	FILE *logfile;
