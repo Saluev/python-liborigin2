@@ -73,8 +73,8 @@ OriginParser* createOriginAnyParser(const string& fileName)
 }
 
 unsigned int OriginAnyParser::readObjectSize() {
-	unsigned int obj_size=0;
-	char c=0;
+	unsigned int obj_size = 0;
+	char c = 0;
 	file >> obj_size;
 	file >> c;
 	if (c != '\n') {
@@ -88,7 +88,7 @@ string OriginAnyParser::readObjectAsString(unsigned int size) {
 	char c;
 	// read a size-byte blob of data followed by '\n'
 	if (size > 0) {
-		// get a string large enough to hold the result, initialize  it to all 0's
+		// get a string large enough to hold the result, initialize it to all 0's
 		string blob = string(size, '\0');
 		// read data into that string
 		// cannot use '>>' operator because iendianfstream truncates it at first '\0'
