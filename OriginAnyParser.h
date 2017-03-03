@@ -38,6 +38,8 @@ public:
 protected:
 	unsigned int readObjectSize();
 	string readObjectAsString(unsigned int);
+	void readFileVersion();
+	void readGlobalHeader();
 
 	iendianfstream file;
 	FILE *logfile;

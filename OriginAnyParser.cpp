@@ -44,41 +44,15 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	LOG_PRINT(logfile, "File size: %d\n", d_file_size)
 
 	// get file and program version, check it is a valid file
-	string fileVersion;
-	getline(file, fileVersion);
-
-	if ((fileVersion.substr(0,4) != "CPYA") or (*fileVersion.rbegin() != '#')) {
-		LOG_PRINT(logfile, "File, is not a valid opj file\n")
-		exit(1);
-	}
-	LOG_PRINT(logfile, "File version string: %s\n", fileVersion.c_str())
+	readFileVersion();
 	unsigned long curpos = 0;
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "Now at %d [0x%X]\n", curpos, curpos)
 
-	// get global header size
-	unsigned int gh_size=0, gh_endmark=0;
-	gh_size = readObjectSize();
+	// get global header
+	readGlobalHeader();
 	curpos = file.tellg();
-	LOG_PRINT(logfile, "Global header size: %d [0x%X], starts at %d [0x%X],", gh_size, gh_size, curpos, curpos)
-
-	// get global header data
-	if (0) {
-		// skip header
-		file.seekg(gh_size+1, ios_base::cur);
-	} else {
-		// read it into a string
-		string gh_data = readObjectAsString(gh_size);
-	}
-	curpos = file.tellg();
-	LOG_PRINT(logfile, " ends at %d [0x%X]\n", curpos, curpos)
-
-	// now read a zero size end mark
-	gh_endmark = readObjectSize();
-	if (gh_endmark != 0) {
-		LOG_PRINT(logfile, "Wrong end of list mark %d at %d [0x%X]\n", gh_endmark, (unsigned long)file.tellg(), (unsigned long)file.tellg())
-		exit(4);
-	}
+	LOG_PRINT(logfile, "Now at %d [0x%X]\n", curpos, curpos)
 
 	return true;
 }
@@ -117,4 +91,42 @@ string OriginAnyParser::readObjectAsString(unsigned int size) {
 		return blob;
 	}
 	return string();
+}
+
+void OriginAnyParser::readFileVersion() {
+	// get file and program version, check it is a valid file
+	string fileVersion;
+	getline(file, fileVersion);
+
+	if ((fileVersion.substr(0,4) != "CPYA") or (*fileVersion.rbegin() != '#')) {
+		LOG_PRINT(logfile, "File, is not a valid opj file\n")
+		exit(1);
+	}
+	LOG_PRINT(logfile, "File version string: %s\n", fileVersion.c_str())
+}
+
+void OriginAnyParser::readGlobalHeader() {
+	// get global header size
+	unsigned int gh_size = 0, gh_endmark = 0;
+	gh_size = readObjectSize();
+	unsigned long curpos = file.tellg();
+	LOG_PRINT(logfile, "Global header size: %d [0x%X], starts at %d [0x%X],", gh_size, gh_size, curpos, curpos)
+
+	// get global header data
+	if (0) {
+		// skip header
+		file.seekg(gh_size+1, ios_base::cur);
+	} else {
+		// read it into a string
+		string gh_data = readObjectAsString(gh_size);
+	}
+	curpos = file.tellg();
+	LOG_PRINT(logfile, " ends at %d [0x%X]\n", curpos, curpos)
+
+	// now read a zero size end mark
+	gh_endmark = readObjectSize();
+	if (gh_endmark != 0) {
+		LOG_PRINT(logfile, "Wrong end of list mark %d at %d [0x%X]\n", gh_endmark, (unsigned long)file.tellg(), (unsigned long)file.tellg())
+		exit(4);
+	}
 }
