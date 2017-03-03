@@ -235,7 +235,7 @@ bool OriginAnyParser::readWindowElement() {
 		if (!readLayerElement()) break;
 		layer_list_size++;
 	}
-	LOG_PRINT(logfile, "  ... done. Layers: %d\n", layer_list_size)
+	LOG_PRINT(logfile, " ... done. Layers: %d\n", layer_list_size)
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "window ends at %d [0x%X]\n", curpos, curpos)
 
@@ -268,63 +268,63 @@ bool OriginAnyParser::readLayerElement() {
 	// get annotation list
 	unsigned int annotation_list_size = 0;
 
-	LOG_PRINT(logfile, " Reading Annotations ...\n")
+	LOG_PRINT(logfile, "   Reading Annotations ...\n")
 	/* Some annotations can be groups of annotations. We need a recursive function for those cases */
 	annotation_list_size = readAnnotationList();
-	LOG_PRINT(logfile, "  ... done. Annotations: %d\n", annotation_list_size)
+	LOG_PRINT(logfile, "   ... done. Annotations: %d\n", annotation_list_size)
 
 	// get curve list
 	unsigned int curve_list_size = 0;
 
-	LOG_PRINT(logfile, " Reading Curves ...\n")
+	LOG_PRINT(logfile, "   Reading Curves ...\n")
 	while (true) {
 		if (!readCurveElement()) break;
 		curve_list_size++;
 	}
-	LOG_PRINT(logfile, "  ... done. Curves: %d\n", curve_list_size)
+	LOG_PRINT(logfile, "   ... done. Curves: %d\n", curve_list_size)
 
 	// get axisbreak list
 	unsigned int axisbreak_list_size = 0;
 
-	LOG_PRINT(logfile, " Reading Axis breaks ...\n")
+	LOG_PRINT(logfile, "   Reading Axis breaks ...\n")
 	while (true) {
 		if (!readAxisBreakElement()) break;
 		axisbreak_list_size++;
 	}
-	LOG_PRINT(logfile, "  ... done. Axis breaks: %d\n", axisbreak_list_size)
+	LOG_PRINT(logfile, "   ... done. Axis breaks: %d\n", axisbreak_list_size)
 
 	// get x axisparameter list
 	unsigned int axispar_x_list_size = 0;
 
-	LOG_PRINT(logfile, " Reading x-Axis parameters ...\n")
+	LOG_PRINT(logfile, "   Reading x-Axis parameters ...\n")
 	while (true) {
 		if (!readAxisParameterElement(1)) break;
 		axispar_x_list_size++;
 	}
-	LOG_PRINT(logfile, "  ... done. x-Axis parameters: %d\n", axispar_x_list_size)
+	LOG_PRINT(logfile, "   ... done. x-Axis parameters: %d\n", axispar_x_list_size)
 
 	// get y axisparameter list
 	unsigned int axispar_y_list_size = 0;
 
-	LOG_PRINT(logfile, " Reading y-Axis parameters ...\n")
+	LOG_PRINT(logfile, "   Reading y-Axis parameters ...\n")
 	while (true) {
 		if (!readAxisParameterElement(2)) break;
 		axispar_y_list_size++;
 	}
-	LOG_PRINT(logfile, "  ... done. y-Axis parameters: %d\n", axispar_y_list_size)
+	LOG_PRINT(logfile, "   ... done. y-Axis parameters: %d\n", axispar_y_list_size)
 
 	// get z axisparameter list
 	unsigned int axispar_z_list_size = 0;
 
-	LOG_PRINT(logfile, " Reading z-Axis parameters ...\n")
+	LOG_PRINT(logfile, "   Reading z-Axis parameters ...\n")
 	while (true) {
 		if (!readAxisParameterElement(3)) break;
 		axispar_z_list_size++;
 	}
-	LOG_PRINT(logfile, "  ... done. z-Axis parameters: %d\n", axispar_z_list_size)
+	LOG_PRINT(logfile, "   ... done. z-Axis parameters: %d\n", axispar_z_list_size)
 
 	curpos = file.tellg();
-	LOG_PRINT(logfile, "layer ends at %d [0x%X]\n", curpos, curpos)
+	LOG_PRINT(logfile, "  layer ends at %d [0x%X]\n", curpos, curpos)
 
 	return true;
 }
@@ -352,7 +352,7 @@ bool OriginAnyParser::readAnnotationElement() {
 
 	curpos = file.tellg();
 	anh_start = curpos;
-	LOG_PRINT(logfile, "  Annotation found: header size %d [0x%X], starts at %d [0x%X]: ", ane_header_size, ane_header_size, curpos, curpos)
+	LOG_PRINT(logfile, "    Annotation found: header size %d [0x%X], starts at %d [0x%X]: ", ane_header_size, ane_header_size, curpos, curpos)
 	string ane_header = readObjectAsString(ane_header_size);
 
 	// get known info
@@ -369,6 +369,7 @@ bool OriginAnyParser::readAnnotationElement() {
 	ane_data_1_size = readObjectSize();
 
 	andt1_start = file.tellg();
+	LOG_PRINT(logfile, "     block 1 size %d [0x%X] at %d [0x%X]\n", ane_data_1_size, ane_data_1_size, andt1_start, andt1_start)
 	string andt1_data = readObjectAsString(ane_data_1_size);
 
 	// TODO: get known info
@@ -380,22 +381,24 @@ bool OriginAnyParser::readAnnotationElement() {
 	unsigned int ane_data_2_size = 0, andt2_start = 0;
 	ane_data_2_size = readObjectSize();
 	andt2_start = file.tellg();
+	LOG_PRINT(logfile, "     block 2 size %d [0x%X] at %d [0x%X]\n", ane_data_2_size, ane_data_2_size, andt2_start, andt2_start)
 	string andt2_data;
 
 	// check for group of annotations
 	if ((ane_data_1_size == 0x5e) and (ane_data_2_size == 0x04)) {
 		unsigned int angroup_size = 0;
 		curpos = file.tellg();
-		LOG_PRINT(logfile, "Annotation group found at %d [0x%X] ...\n", curpos, curpos)
+		LOG_PRINT(logfile, "  Annotation group found at %d [0x%X] ...\n", curpos, curpos)
 		angroup_size = readAnnotationList();
 		curpos = file.tellg();
-		LOG_PRINT(logfile, "... group end at %d [0x%X]. Annotations: %d\n", curpos, curpos, angroup_size)
+		LOG_PRINT(logfile, "  ... group end at %d [0x%X]. Annotations: %d\n", curpos, curpos, angroup_size)
 		andt2_data = string("");
 	} else {
 		andt2_data = readObjectAsString(ane_data_2_size);
 		// TODO: get known info
 		// go to end of second data block
-		file.seekg(andt2_start+ane_data_2_size+1, ios_base::beg);
+		file.seekg(andt2_start+ane_data_2_size, ios_base::beg);
+		if (ane_data_2_size > 0) file.seekg(1, ios_base::cur);
 	}
 
 	// third block
@@ -403,10 +406,11 @@ bool OriginAnyParser::readAnnotationElement() {
 	ane_data_3_size = readObjectSize();
 
 	andt3_start = file.tellg();
+	LOG_PRINT(logfile, "     block 3 size %d [0x%X] at %d [0x%X]\n", ane_data_3_size, ane_data_3_size, andt3_start, andt3_start)
 	string andt3_data = readObjectAsString(ane_data_3_size);
 
 	curpos = file.tellg();
-	LOG_PRINT(logfile, "annotation ends at %d [0x%X]\n", curpos, curpos)
+	LOG_PRINT(logfile, "    annotation ends at %d [0x%X]\n", curpos, curpos)
 
 	return true;
 }
@@ -423,7 +427,7 @@ bool OriginAnyParser::readCurveElement() {
 
 	curpos = file.tellg();
 	cvh_start = curpos;
-	LOG_PRINT(logfile, "  Curve found: header size %d [0x%X], starts at %d [0x%X]: ", cve_header_size, cve_header_size, curpos, curpos)
+	LOG_PRINT(logfile, "    Curve found: header size %d [0x%X], starts at %d [0x%X]\n", cve_header_size, cve_header_size, curpos, curpos)
 	string cve_header = readObjectAsString(cve_header_size);
 
 	// TODO: get known info from curve header
@@ -432,15 +436,17 @@ bool OriginAnyParser::readCurveElement() {
 	file.seekg(cvh_start+cve_header_size+1, ios_base::beg);
 	cve_data_size = readObjectSize();
 	cvd_start = file.tellg();
+	LOG_PRINT(logfile, "    curve data size %d [0x%X], at %d [0x%X]\n", cve_data_size, cve_data_size, cvd_start, cvd_start)
 	string cve_data = readObjectAsString(cve_data_size);
 
 	// TODO: get known info from curve data
 
 	// go to end of data
-	file.seekg(cvd_start+cve_data_size+1, ios_base::beg);
+	file.seekg(cvd_start+cve_data_size, ios_base::beg);
+	if (cve_data_size > 0) file.seekg(1, ios_base::cur);
 
 	curpos = file.tellg();
-	LOG_PRINT(logfile, "curve ends at %d [0x%X]\n", curpos, curpos)
+	LOG_PRINT(logfile, "    curve ends at %d [0x%X]\n", curpos, curpos)
 
 	return true;
 }
