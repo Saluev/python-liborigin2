@@ -159,6 +159,7 @@ bool OriginAnyParser::readDataSetElement() {
 	unsigned long curpos = 0, dsh_start = 0, dsd_start = 0, dsm_start = 0;
 	string dse_header;
 
+	// get dataset header size
 	dse_header_size = readObjectSize();
 	if (dse_header_size == 0) return false;
 
@@ -209,6 +210,7 @@ bool OriginAnyParser::readWindowElement() {
 	unsigned int wde_header_size = 0;
 	unsigned long curpos = 0, wdh_start = 0;
 
+	// get window header size
 	wde_header_size = readObjectSize();
 	if (wde_header_size == 0) return false;
 
@@ -234,6 +236,8 @@ bool OriginAnyParser::readWindowElement() {
 		layer_list_size++;
 	}
 	LOG_PRINT(logfile, "  ... done. Layers: %d\n", layer_list_size)
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "window ends at %d [0x%X]\n", curpos, curpos)
 
 	return true;
 }
@@ -244,6 +248,7 @@ bool OriginAnyParser::readLayerElement() {
 	unsigned int lye_header_size = 0;
 	unsigned long curpos = 0, lyh_start = 0;
 
+	// get layer header size
 	lye_header_size = readObjectSize();
 	if (lye_header_size == 0) return false;
 
@@ -317,6 +322,9 @@ bool OriginAnyParser::readLayerElement() {
 		axispar_z_list_size++;
 	}
 	LOG_PRINT(logfile, "  ... done. z-Axis parameters: %d\n", axispar_z_list_size)
+
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "layer ends at %d [0x%X]\n", curpos, curpos)
 
 	return true;
 }
