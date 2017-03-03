@@ -254,13 +254,10 @@ bool OriginAnyParser::readLayerElement() {
 
 	curpos = file.tellg();
 	lyh_start = curpos;
-	LOG_PRINT(logfile, "  Layer found: header size %d [0x%X], starts at %d [0x%X]: ", lye_header_size, lye_header_size, curpos, curpos)
+	LOG_PRINT(logfile, "  Layer found: header size %d [0x%X], starts at %d [0x%X]\n", lye_header_size, lye_header_size, curpos, curpos)
 	string lye_header = readObjectAsString(lye_header_size);
 
 	// get known info
-	string name(25,0);
-	name = lye_header.substr(0x02,25);
-	LOG_PRINT(logfile, "%s\n", name.c_str())
 
 	// go to end of layer header
 	file.seekg(lyh_start+lye_header_size+1, ios_base::beg);
