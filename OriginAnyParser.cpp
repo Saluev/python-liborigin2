@@ -410,3 +410,37 @@ bool OriginAnyParser::readAnnotationElement() {
 
 	return true;
 }
+
+bool OriginAnyParser::readCurveElement() {
+	/* get general info and details of a Curve
+	 * return true if a Curve is found, otherwise return false */
+	unsigned int cve_header_size = 0, cve_data_size = 0;
+	unsigned long curpos = 0, cvh_start = 0, cvd_start = 0;
+
+	// get curve header size
+	cve_header_size = readObjectSize();
+	if (cve_header_size == 0) return false;
+
+	curpos = file.tellg();
+	cvh_start = curpos;
+	LOG_PRINT(logfile, "  Curve found: header size %d [0x%X], starts at %d [0x%X]: ", cve_header_size, cve_header_size, curpos, curpos)
+	string cve_header = readObjectAsString(cve_header_size);
+
+	// TODO: get known info from curve header
+
+	// go to end of header, get curve data size
+	file.seekg(cvh_start+cve_header_size+1, ios_base::beg);
+	cve_data_size = readObjectSize();
+	cvd_start = file.tellg();
+	string cve_data = readObjectAsString(cve_data_size);
+
+	// TODO: get known info from curve data
+
+	// go to end of data
+	file.seekg(cvd_start+cve_data_size+1, ios_base::beg);
+
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "curve ends at %d [0x%X]\n", curpos, curpos)
+
+	return true;
+}
