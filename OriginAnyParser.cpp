@@ -235,7 +235,8 @@ bool OriginAnyParser::readDataSetElement() {
 	// get data values
 
 	// go to end of data values, get mask size (often zero)
-	file.seekg(dsd_start+dse_data_size+1, ios_base::beg);
+	file.seekg(dsd_start+dse_data_size, ios_base::beg); // dse_data_size can be zero
+	if (dse_data_size > 0) file.seekg(1, ios_base::cur);
 	dse_mask_size = readObjectSize();
 	dsm_start = file.tellg();
 	if (dse_mask_size > 0) LOG_PRINT(logfile, "mask size %d [0x%X], starts at %d [0x%X]", dse_mask_size, dse_mask_size, dsm_start, dsm_start)
