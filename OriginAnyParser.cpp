@@ -22,6 +22,9 @@
 #include "OriginAnyParser.h"
 #include <sstream>
 
+/* define a macro to get an int (or uint) from a istringstream in binary mode */
+#define GET_INT(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 4);};
+
 OriginAnyParser::OriginAnyParser(const string& fileName)
 :	file(fileName.c_str(),ios::binary)
 {
@@ -700,13 +703,12 @@ void OriginAnyParser::readProjectLeave() {
 	curpos = file.tellg();
 	string ptl_data = readObjectAsString(ptl_data_size);
 
+	// get info from file data
 	istringstream stmp(ios_base::binary);
 	stmp.str(ptl_data);
-	unsigned int file_type = 0;
-	stmp.read(reinterpret_cast<char *>(&file_type), 4);
-
-	unsigned int file_object_id = 0;
-	stmp.read(reinterpret_cast<char *>(&file_object_id), 4);
+	unsigned int file_type = 0, file_object_id = 0;
+	GET_INT(stmp, file_type);
+	GET_INT(stmp, file_object_id);
 
 	LOG_PRINT(logfile, "File at %d [0x%X], type %d, object_id %d\n", curpos, curpos, file_type, file_object_id)
 
