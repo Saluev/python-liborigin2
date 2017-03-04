@@ -20,6 +20,7 @@
  */
 
 #include "OriginAnyParser.h"
+#include <sstream>
 
 OriginAnyParser::OriginAnyParser(const string& fileName)
 :	file(fileName.c_str(),ios::binary)
@@ -106,6 +107,18 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 		note_list_size++;
 	}
 	LOG_PRINT(logfile, " ... done. Note windows: %d\n", note_list_size)
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
+
+	// Project Tree was added between version >4.210 and 4.2616,
+	// i.e., with Release 6.0
+	if (curpos >= d_file_size) {
+		LOG_PRINT(logfile, "Now at end of file\n")
+		return true;
+	}
+
+	// get project tree
+	readProjectTree();
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
 
@@ -591,4 +604,114 @@ bool OriginAnyParser::readNoteElement() {
 	LOG_PRINT(logfile, "  contents at %d [0x%X]: \n%s\n", nwc_start, nwc_start, nwe_contents.c_str())
 
 	return true;
+}
+
+void OriginAnyParser::readProjectTree() {
+	unsigned int pte_depth = 0;
+
+	// first preamble size and data (usually 4)
+	unsigned int pte_pre1_size = readObjectSize();
+	string pte_pre1 = readObjectAsString(pte_pre1_size);
+
+	// second preamble size and data (usually 16)
+	unsigned int pte_pre2_size = readObjectSize();
+	string pte_pre2 = readObjectAsString(pte_pre2_size);
+
+	// root element and children
+	unsigned int rootfolder = readFolderTree(pte_depth);
+
+	// epilogue (should be zero)
+	unsigned int pte_post_size = readObjectSize();
+
+	return;
+}
+
+unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
+	unsigned int fle_header_size = 0, fle_eofh_size = 0, fle_name_size = 0, fle_prop_size = 0;
+	unsigned long curpos = 0;
+
+	// folder header size, data, end mark
+	fle_header_size = readObjectSize();
+	string fle_header = readObjectAsString(fle_header_size);
+	fle_eofh_size = readObjectSize(); // (usually 0)
+
+	// folder name size
+	fle_name_size = readObjectSize();
+	curpos = file.tellg();
+	string fle_name = readObjectAsString(fle_name_size);
+	LOG_PRINT(logfile, "Folder name at %d [0x%X]: %s\n", curpos, curpos, fle_name.c_str());
+
+	// additional properties
+	fle_prop_size = readObjectSize();
+	for (unsigned int i = 0; i < fle_prop_size; i++) {
+		unsigned int obj_size = readObjectSize();
+		string obj_data = readObjectAsString(obj_size);
+	}
+
+	// file entries
+	unsigned int number_of_files_size = 0;
+
+	number_of_files_size = readObjectSize(); // should be 4 as number_of_files is an integer
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "Number of files at %d [0x%X] ", curpos, curpos);
+	string fle_nfiles = readObjectAsString(number_of_files_size);
+
+	istringstream stmp(ios_base::binary);
+	stmp.str(fle_nfiles);
+	unsigned int number_of_files = 0;
+	stmp.read(reinterpret_cast<char *>(&number_of_files), number_of_files_size);
+	LOG_PRINT(logfile, "%d\n", number_of_files)
+
+	for (unsigned int i=0; i < number_of_files; i++) {
+		readProjectLeave();
+	}
+
+	// subfolder entries
+	unsigned int number_of_folders_size = 0;
+
+	number_of_folders_size = readObjectSize(); // should be 4 as number_of_subfolders is an integer
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "Number of subfolders at %d [0x%X] ", curpos, curpos);
+	string fle_nfolders = readObjectAsString(number_of_folders_size);
+
+	stmp.str(fle_nfolders);
+	unsigned int number_of_folders = 0;
+	stmp.read(reinterpret_cast<char *>(&number_of_folders), number_of_folders_size);
+	LOG_PRINT(logfile, "%d\n", number_of_folders)
+
+	for (unsigned int i=0; i < number_of_folders; i++) {
+		depth++;
+		unsigned int subfolder = readFolderTree(depth);
+		depth--;
+	}
+
+	return number_of_files;
+}
+
+void OriginAnyParser::readProjectLeave() {
+	unsigned long curpos = 0;
+
+	// preamble size (usually 0) and data
+	unsigned int ptl_pre_size = readObjectSize();
+	string ptl_pre = readObjectAsString(ptl_pre_size);
+
+	// file data size (usually 8) and data
+	unsigned int ptl_data_size = readObjectSize();
+	curpos = file.tellg();
+	string ptl_data = readObjectAsString(ptl_data_size);
+
+	istringstream stmp(ios_base::binary);
+	stmp.str(ptl_data);
+	unsigned int file_type = 0;
+	stmp.read(reinterpret_cast<char *>(&file_type), 4);
+
+	unsigned int file_object_id = 0;
+	stmp.read(reinterpret_cast<char *>(&file_object_id), 4);
+
+	LOG_PRINT(logfile, "File at %d [0x%X], type %d, object_id %d\n", curpos, curpos, file_type, file_object_id)
+
+	// epilogue (should be zero)
+	unsigned int ptl_post_size = readObjectSize();
+
+	return;
 }

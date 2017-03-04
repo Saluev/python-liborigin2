@@ -50,6 +50,9 @@ protected:
 	bool readAxisParameterElement(unsigned int);
 	bool readParameterElement();
 	bool readNoteElement();
+	void readProjectTree();
+	unsigned int readFolderTree(unsigned int);
+	void readProjectLeave();
 
 	iendianfstream file;
 	FILE *logfile;
