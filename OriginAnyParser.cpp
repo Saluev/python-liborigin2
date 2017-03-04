@@ -125,6 +125,17 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
 
+	// Attachments were added between version >4.2673_558 and 4.2764_623,
+	// i.e., with Release 7.0
+	if (curpos >= d_file_size) {
+		LOG_PRINT(logfile, "Now at end of file\n")
+		return true;
+	}
+
+	readAttachmentList();
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
+
 	return true;
 }
 
@@ -715,6 +726,87 @@ void OriginAnyParser::readProjectLeave() {
 
 	// epilogue (should be zero)
 	unsigned int ptl_post_size = readObjectSize();
+
+	return;
+}
+
+void OriginAnyParser::readAttachmentList() {
+	/* Attachments are divided in two groups */
+	// first group
+	unsigned int att_list1_size = 0;
+	unsigned long curpos = 0;
+
+	// get two integers 4096 (0x1000) and number of attachments
+	att_list1_size = readObjectSize(); // should be 8 as we expect two integer values
+	curpos = file.tellg();
+	string att_list1 = readObjectAsString(att_list1_size);
+	LOG_PRINT(logfile, "First attachment group at %d [0x%X]", curpos, curpos)
+
+	istringstream stmp(ios_base::binary);
+	stmp.str(att_list1);
+
+	unsigned int att_mark = 0, number_of_atts = 0, iattno = 0, att_data_size = 0;
+	GET_INT(stmp, att_mark) // should be 4096
+	GET_INT(stmp, number_of_atts)
+	LOG_PRINT(logfile, " with %d attachments.\n", number_of_atts)
+
+	string att_header;
+	for (unsigned int i=0; i < number_of_atts; i++) {
+		/* Header is a group of 7 integers followed by \n
+		1st  attachment mark (4096: 0x00 0x10 0x00 0x00)
+		2nd  attachment number ( <num_of_att)
+		3rd  attachment size
+		4th .. 7th ???
+		*/
+		// get header
+		att_header = readObjectAsString(7*4);
+		stmp.str(att_header);
+		GET_INT(stmp, att_mark) // should be 4096
+		GET_INT(stmp, iattno)
+		GET_INT(stmp, att_data_size)
+		curpos = file.tellg();
+		LOG_PRINT(logfile, "Attachment no %d (%d) at %d [0x%X], size %d\n", i, iattno, curpos, curpos, att_data_size)
+
+		// get data
+		string att_data = readObjectAsString(att_data_size);
+		// even if att_data_size is zero, we get a '\n' mark
+		if (att_data_size == 0) file.seekg(1, ios_base::cur);
+	}
+
+	/* Second group is as series of (header, name, data) triplets
+	   There is no number of attachments. It ends when we reach EOF. */
+	curpos = file.tellg();
+	LOG_PRINT(logfile, "Second attachment group starts at %d [0x%X], file size %d\n", curpos, curpos, d_file_size)
+	/* Header is a group of 3 integers, with no '\n' at end
+		1st attachment header+name size including itself
+		2nd attachment type (0x59 0x04 0xCA 0x7F for excel workbooks)
+		3rd size of data */
+
+	// get header
+	att_header = string(12,0);
+	while (true) {
+		// check for eof
+		if ((file.tellg() == d_file_size) || (file.eof())) break;
+		// cannot use readObjectAsString: there is no '\n' at end
+		file.read(reinterpret_cast<char*>(&att_header[0]), 12);
+
+		if (file.gcount() != 12) break;
+		// get header size, type and data size
+		unsigned int att_header_size=0, att_type=0, att_size=0;
+		stmp.str(att_header);
+		GET_INT(stmp, att_header_size)
+		GET_INT(stmp, att_type)
+		GET_INT(stmp, att_size)
+
+		// get name and data
+		unsigned int name_size = att_header_size - 3*4;
+		string att_name = string(name_size, 0);
+		file.read(&att_name[0], name_size);
+		curpos = file.tellg();
+		string att_data = string(att_size, 0);
+		file.read(&att_data[0], att_size);
+		LOG_PRINT(logfile, "attachment at %d [0x%X], type 0x%X, size %d [0x%X]: %s\n", curpos, curpos, att_type, att_size, att_size, att_name.c_str())
+	}
 
 	return;
 }

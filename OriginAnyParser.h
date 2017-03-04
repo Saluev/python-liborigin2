@@ -53,6 +53,7 @@ protected:
 	void readProjectTree();
 	unsigned int readFolderTree(unsigned int);
 	void readProjectLeave();
+	void readAttachmentList();
 
 	iendianfstream file;
 	FILE *logfile;
