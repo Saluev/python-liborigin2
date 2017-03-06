@@ -138,6 +138,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 			case 0x50DC:
 			case 0x70E2:
 
+				/*
 				pos = name.find_first_of("@");
 				if(pos != string::npos){
 					name.resize(pos);
@@ -148,10 +149,12 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 					matrixes.back().sheets = sheets;
 					dataIndex++;
 					break;
-				}
+				}*/
 
 				LOG_PRINT(logfile, "NEW MATRIX\n")
-				matrixes.push_back(Matrix(name, dataIndex));
+				// matrixes.push_back(Matrix(name, dataIndex));
+				matrixes.push_back(Matrix(name));
+				matrixes.back().sheets.push_back(MatrixSheet(name, dataIndex));
 				LOG_PRINT(logfile, "MATRIX %s has dataIndex: %d\n", name.c_str(), dataIndex)
 
 				++dataIndex;
@@ -166,7 +169,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 					{
 						double value;
 						file >> value;
-						matrixes.back().data.push_back((double)value);
+						matrixes.back().sheets.back().data.push_back((double)value);
 						//if (size < 100)
 							//LOG_PRINT(logfile, "%g ", value)
 					}
@@ -176,7 +179,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 					{
 						float value;
 						file >> value;
-						matrixes.back().data.push_back((double)value);
+						matrixes.back().sheets.back().data.push_back((double)value);
 						if (size < 100)
 							LOG_PRINT(logfile, "%g ", value)
 					}
@@ -188,7 +191,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							unsigned int value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%u ", value)
 						}
@@ -199,7 +202,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							int value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%d ", value)
 						}
@@ -212,7 +215,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							unsigned short value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%u ", value)
 						}
@@ -223,7 +226,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							short value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%d ", value)
 						}
@@ -236,7 +239,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							unsigned char value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%u ", value)
 						}
@@ -247,7 +250,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							char value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%d ", value)
 						}
@@ -326,8 +329,6 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
 			if(sheetpos != string::npos){
 				unsigned int sheet = atoi(columnname.substr(sheetpos + 1).c_str());
 				if( sheet > 1){
-					speadSheets[spread].multisheet = true;
-
 					speadSheets[spread].columns.back().name = columnname;
 					speadSheets[spread].columns.back().sheet = sheet - 1;
 
@@ -998,7 +999,9 @@ void Origin800Parser::readMatrixInfo()
 	matrixes[idx].name = name;
 	file.seekg(POS, ios_base::beg);
 	readWindowProperties(matrixes[idx], size);
-	LOG_PRINT(logfile, "	MATRIX %s has %d sheets\n", name.c_str(), matrixes[idx].sheets)
+
+	MatrixSheet sheet = matrixes[idx].sheets.back();
+	LOG_PRINT(logfile, "	MATRIX %s has %d sheets\n", name.c_str(), matrixes[idx].sheets.size())
 
 	unsigned int h;
 	file.seekg(POS + 0x87, ios_base::beg);
@@ -1013,18 +1016,18 @@ void Origin800Parser::readMatrixInfo()
 	LAYER += 0x5;
 
 	file.seekg(LAYER + 0x2B, ios_base::beg);
-	file >> matrixes[idx].columnCount;
-	LOG_PRINT(logfile, "			Columns: %d (@ 0x%X)\n", matrixes[idx].columnCount, (LAYER + 0x2B))
+	file >> sheet.columnCount;
+	LOG_PRINT(logfile, "			Columns: %d (@ 0x%X)\n", sheet.columnCount, (LAYER + 0x2B))
 
 	file.seekg(LAYER + 0x52, ios_base::beg);
-	file >> matrixes[idx].rowCount;
-	LOG_PRINT(logfile, "			Rows: %d (@ 0x%X)\n", matrixes[idx].rowCount, (LAYER + 0x52))
+	file >> sheet.rowCount;
+	LOG_PRINT(logfile, "			Rows: %d (@ 0x%X)\n", sheet.rowCount, (LAYER + 0x52))
 
 	file.seekg(LAYER + 0x52 + 0x1F, ios_base::beg);
 	unsigned short view;
 	file >> view;
 	if (view == 3)
-		matrixes[idx].view = Matrix::ImageView;
+		sheet.view = MatrixSheet::ImageView;
 
 	unsigned int maxSearchPos = findStringPos("__WIOTN");
 	unsigned int stringSize = 47;
@@ -1034,17 +1037,17 @@ void Origin800Parser::readMatrixInfo()
 		if (findSection(sectionNames[i], stringSize, maxSearchPos)){
 			string s(32, 0);
 			file >> s;
-			matrixes[idx].coordinates[i] = stringToDouble(s);
-			LOG_PRINT(logfile, "		%s: %g cursor pos: 0x%X\n", sectionNames[i], matrixes[idx].coordinates[i], (unsigned int)file.tellg())
+			sheet.coordinates[i] = stringToDouble(s);
+			LOG_PRINT(logfile, "		%s: %g cursor pos: 0x%X\n", sectionNames[i], sheet.coordinates[i], (unsigned int)file.tellg())
 		}
 	}
 
 	if (findSection("1", stringSize, maxSearchPos)){
-		file >> matrixes[idx].command.assign(32, 0);
-		LOG_PRINT(logfile, "		Formula: %s cursor pos: 0x%X\n", matrixes[idx].command.c_str(), (unsigned int)file.tellg())
+		file >> sheet.command.assign(32, 0);
+		LOG_PRINT(logfile, "		Formula: %s cursor pos: 0x%X\n", sheet.command.c_str(), (unsigned int)file.tellg())
 	}
 
-	for (unsigned int i = 0; i < matrixes[idx].sheets; i++)
+	for (unsigned int i = 0; i < matrixes[idx].sheets.size(); i++)
 		findSection("__LayerInfoStorage", 20);
 
 	for (int i = 0; i < 7; i++)
@@ -1064,19 +1067,19 @@ void Origin800Parser::readMatrixInfo()
 		width /= 0xA;
 		if (width == 0)
 			width = 8;
-		matrixes[idx].width = width;
+		sheet.width = width;
 
 		unsigned char c1, c2;
 		file.seekg(LAYER + 0x1E, ios_base::beg);
 		file >> c1;
 		file >> c2;
-		matrixes[idx].valueTypeSpecification = c1/0x10;
+		sheet.valueTypeSpecification = c1/0x10;
 		if(c2 >= 0x80){
-			matrixes[idx].significantDigits = c2-0x80;
-			matrixes[idx].numericDisplayType = SignificantDigits;
+			sheet.significantDigits = c2-0x80;
+			sheet.numericDisplayType = SignificantDigits;
 		} else if(c2 > 0){
-			matrixes[idx].decimalPlaces = c2-0x03;
-			matrixes[idx].numericDisplayType = DecimalPlaces;
+			sheet.decimalPlaces = c2-0x03;
+			sheet.numericDisplayType = DecimalPlaces;
 		}
 	}
 
@@ -1093,8 +1096,7 @@ void Origin800Parser::readMatrixInfo()
 
 	for (int i = 0; i < 3; i++)
 		skipLine();
-
-	skipObjectInfo();
+	matrixes[idx].sheets.back() = sheet;
 }
 
 void Origin800Parser::readGraphInfo()

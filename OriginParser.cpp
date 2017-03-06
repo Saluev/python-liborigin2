@@ -101,9 +101,14 @@ pair<string, string> OriginParser::findDataByIndex(unsigned int index) const
 
 	for(vector<Matrix>::const_iterator it = matrixes.begin(); it != matrixes.end(); ++it)
 	{
-		if(it->index == index)
-			return make_pair("M_" + it->name, it->name);
+		for(vector<MatrixSheet>::const_iterator it1 = it->sheets.begin(); it1 != it->sheets.end(); ++it1)
+		{
+			if(it1->index == index)
+				return make_pair("M_" + it->name, it1->name);
+		}
+
 	}
+
 
 	for(vector<Excel>::const_iterator it = excels.begin(); it != excels.end(); ++it)
 	{

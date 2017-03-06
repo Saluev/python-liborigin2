@@ -128,7 +128,9 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 			case 0x50DC:
 
 				LOG_PRINT(logfile, "NEW MATRIX\n")
-				matrixes.push_back(Matrix(name, dataIndex));
+				// matrixes.push_back(Matrix(name, dataIndex));
+				matrixes.push_back(Matrix(name));
+				matrixes.back().sheets.push_back(MatrixSheet(name, dataIndex));
 				++dataIndex;
 				LOG_PRINT(logfile, "VALUES :\n")
 				if (size >= 100)
@@ -141,7 +143,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 					{
 						double value;
 						file >> value;
-						matrixes.back().data.push_back((double)value);
+						matrixes.back().sheets.back().data.push_back((double)value);
 						if (size < 100)
 							LOG_PRINT(logfile, "%g ", value)
 					}
@@ -151,7 +153,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 					{
 						float value;
 						file >> value;
-						matrixes.back().data.push_back((double)value);
+						matrixes.back().sheets.back().data.push_back((double)value);
 						if (size < 100)
 							LOG_PRINT(logfile, "%g ", value)
 					}
@@ -163,7 +165,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							unsigned int value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%u ", value)
 						}
@@ -174,7 +176,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							int value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%d ", value)
 						}
@@ -187,7 +189,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							unsigned short value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%u ", value)
 						}
@@ -198,7 +200,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							short value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%d ", value)
 						}
@@ -211,7 +213,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							unsigned char value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%u ", value)
 						}
@@ -222,7 +224,7 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 						{
 							char value;
 							file >> value;
-							matrixes.back().data.push_back((double)value);
+							matrixes.back().sheets.back().data.push_back((double)value);
 							if (size < 100)
 								LOG_PRINT(logfile, "%d ", value)
 						}
@@ -297,12 +299,14 @@ bool Origin700Parser::parse(ProgressCallback callback, void *user_data)
 			LOG_PRINT(logfile, "SPREADSHEET = %s COLUMN NAME = %s (%d) (@0x%X)\n", name.c_str(), columnname.c_str(), current_col, (unsigned int)file.tellg())
 			speadSheets[spread].columns.push_back(SpreadColumn(columnname, dataIndex));
 			string::size_type sheetpos = speadSheets[spread].columns.back().name.find_last_of("@");
-			if(!speadSheets[spread].multisheet && sheetpos != string::npos)
-			{
-				if(atoi(columnname.substr(sheetpos + 1).c_str()) > 1)
-				{
-					speadSheets[spread].multisheet = true;
-					LOG_PRINT(logfile, "SPREADSHEET \"%s\" IS MULTISHEET\n", name.c_str())
+			if(sheetpos != string::npos){
+				unsigned int sheet = atoi(columnname.substr(sheetpos + 1).c_str());
+				if( sheet > 1){
+					speadSheets[spread].columns.back().name = columnname;
+					speadSheets[spread].columns.back().sheet = sheet - 1;
+
+					if (speadSheets[spread].sheets < sheet)
+						speadSheets[spread].sheets = sheet;
 				}
 			}
 			++dataIndex;
@@ -457,12 +461,14 @@ void Origin700Parser::readMatrixInfo()
 	file.seekg(POS, ios_base::beg);
 	readWindowProperties(matrixes[idx], size);
 
+	MatrixSheet sheet = matrixes[idx].sheets.back();
+
 	unsigned char h;
 	file.seekg(POS + 0x87, ios_base::beg);
 	file >> h;
 	switch(h){
 		case 1:
-			matrixes[idx].view = Matrix::ImageView;
+			sheet.view = MatrixSheet::ImageView;
 			break;
 		case 2:
 			matrixes[idx].header = Matrix::XY;
@@ -482,16 +488,17 @@ void Origin700Parser::readMatrixInfo()
 	file >> width;
 	if (width == 0)
 		width = 8;
-	matrixes[idx].width = width;
-	LOG_PRINT(logfile, "			Width: %d (@ 0x%X)\n", matrixes[idx].width, (LAYER + 0x27))
+
+	sheet.width = width;
+	LOG_PRINT(logfile, "			Width: %d (@ 0x%X)\n", sheet.width, (LAYER + 0x27))
 
 	file.seekg(LAYER + 0x2B, ios_base::beg);
-	file >> matrixes[idx].columnCount;
-	LOG_PRINT(logfile, "			Columns: %d (@ 0x%X)\n", matrixes[idx].columnCount, (LAYER + 0x2B))
+	file >> sheet.columnCount;
+	LOG_PRINT(logfile, "			Columns: %d (@ 0x%X)\n", sheet.columnCount, (LAYER + 0x2B))
 
 	file.seekg(LAYER + 0x52, ios_base::beg);
-	file >> matrixes[idx].rowCount;
-	LOG_PRINT(logfile, "			Rows: %d (@ 0x%X)\n", matrixes[idx].rowCount, (LAYER + 0x52))
+	file >> sheet.rowCount;
+	LOG_PRINT(logfile, "			Rows: %d (@ 0x%X)\n", sheet.rowCount, (LAYER + 0x52))
 
 	LAYER += size + 0x1;
 	file.seekg(LAYER, ios_base::beg);
@@ -516,28 +523,28 @@ void Origin700Parser::readMatrixInfo()
 		//check if it is a formula
 		if(sec_name == "MV"){
 			file.seekg(LAYER, ios_base::beg);
-			file >> matrixes[idx].command.assign(size, 0);
-			LOG_PRINT(logfile, "				Formula: %s (@ 0x%X)\n", matrixes[idx].command.c_str(), LAYER)
+			file >> sheet.command.assign(size, 0);
+			LOG_PRINT(logfile, "				Formula: %s (@ 0x%X)\n", sheet.command.c_str(), LAYER)
 		} else if (sec_name == "Y2"){
 			string s(size, 0);
 			file >> s;
-			matrixes[idx].coordinates[0] = stringToDouble(s);
-			LOG_PRINT(logfile, "				Y2: %g\n", matrixes[idx].coordinates[0])
+			sheet.coordinates[0] = stringToDouble(s);
+			LOG_PRINT(logfile, "				Y2: %g\n", sheet.coordinates[0])
 		} else if (sec_name == "X2"){
 			string s(size, 0);
 			file >> s;
-			matrixes[idx].coordinates[1] = stringToDouble(s);
-			LOG_PRINT(logfile, "				X2: %g\n", matrixes[idx].coordinates[1])
+			sheet.coordinates[1] = stringToDouble(s);
+			LOG_PRINT(logfile, "				X2: %g\n", sheet.coordinates[1])
 		} else if (sec_name == "Y1"){
 			string s(size, 0);
 			file >> s;
-			matrixes[idx].coordinates[2] = stringToDouble(s);
-			LOG_PRINT(logfile, "				Y1: %g\n", matrixes[idx].coordinates[2])
+			sheet.coordinates[2] = stringToDouble(s);
+			LOG_PRINT(logfile, "				Y1: %g\n", sheet.coordinates[2])
 		} else if (sec_name == "X1"){
 			string s(size, 0);
 			file >> s;
-			matrixes[idx].coordinates[3] = stringToDouble(s);
-			LOG_PRINT(logfile, "				X1: %g\n", matrixes[idx].coordinates[3])
+			sheet.coordinates[3] = stringToDouble(s);
+			LOG_PRINT(logfile, "				X1: %g\n", sheet.coordinates[3])
 		}
 
 		//section_body_2_size
@@ -549,7 +556,7 @@ void Origin700Parser::readMatrixInfo()
 		LAYER += 0x5;
 		if (sec_name == "COLORMAP"){
 			file.seekg(LAYER + 0x14, ios_base::beg);
-			readColorMap(matrixes[idx].colorMap);
+			readColorMap(sheet.colorMap);
 		}
 
 		//close section 00 00 00 00 0A
@@ -568,18 +575,19 @@ void Origin700Parser::readMatrixInfo()
 	file >> c1;
 	file >> c2;
 
-	matrixes[idx].valueTypeSpecification = c1/0x10;
+	sheet.valueTypeSpecification = c1/0x10;
 	if(c2 >= 0x80){
-		matrixes[idx].significantDigits = c2 - 0x80;
-		matrixes[idx].numericDisplayType = SignificantDigits;
+		sheet.significantDigits = c2 - 0x80;
+		sheet.numericDisplayType = SignificantDigits;
 	} else if(c2 > 0){
-		matrixes[idx].decimalPlaces = c2 - 0x03;
-		matrixes[idx].numericDisplayType = DecimalPlaces;
+		sheet.decimalPlaces = c2 - 0x03;
+		sheet.numericDisplayType = DecimalPlaces;
 	}
 
 	LAYER += size + 0x06;
 	file.seekg(LAYER, ios_base::beg);
-	skipObjectInfo();
+
+	matrixes[idx].sheets.back() = sheet;
 	LOG_PRINT(logfile, "		Done with matrix, pos @ 0x%X\n", (unsigned int)file.tellg())
 }
 
