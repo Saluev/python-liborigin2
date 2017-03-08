@@ -31,6 +31,7 @@
 #include <cstdio>  // for fprintf
 #include <cstdlib> // for atoi
 #include <fstream>
+#include <string>
 
 OriginFile::OriginFile(const string& fileName)
 :	fileVersion(0)
@@ -54,54 +55,59 @@ OriginFile::OriginFile(const string& fileName)
 	}
 #endif // NO_CODE_GENERATION_FOR_LOG
 
-	string vers(4, 0);
-	file.seekg(0x7, ios_base::beg);
-	file >> vers;
-	fileVersion = atoi(vers.c_str());
+	string vers;
+	getline(file, vers);
+	unsigned int majorVersion = atoi(vers.substr(5,1).c_str());
+	char locale_decpoint = vers[6];
+	unsigned int buildVersion = atoi(vers.substr(7).c_str());
+	unsigned int buildNumber = atoi(vers.substr(12).c_str());
 	file.close();
+	LOG_PRINT(logfile, "File: %s\n", fileName.c_str())
 
-	LOG_PRINT(logfile, "File: %s [version = %d]\n", fileName.c_str(), fileVersion)
-
-	buildVersion = fileVersion;
 	// translate version
-	/*if(fileVersion >= 130 && fileVersion <= 140) // 4.1
+	if (majorVersion==3) {
+		if (buildVersion < 830)
+			fileVersion = 350;
+		else
+			fileVersion = 410;
+	} else if (buildVersion >= 110 && buildVersion <= 141) // 4.1
 		fileVersion = 410;
-	else if(fileVersion == 210) // 5.0
+	else if (buildVersion <= 210) // 5.0
 		fileVersion = 500;
-	else if(fileVersion == 2625) // 6.0
+	else if (buildVersion <= 2623) // 6.0
 		fileVersion = 600;
-	else if(fileVersion == 2627) // 6.0 SR1
+	else if (buildVersion <= 2627) // 6.0 SR1
 		fileVersion = 601;
-	else if(fileVersion == 2630) // 6.0 SR4
+	else if (buildVersion <2635) // 6.0 SR4
 		fileVersion = 604;
-	else if(fileVersion == 2635) // 6.1
+	else if (buildVersion <2656) // 6.1
 		fileVersion = 610;
-	else if(fileVersion >= 2656 && fileVersion <= 2664) // 7.0
+	else if (buildVersion <2659) // 7.0 SR0 (2656-2658)
 		fileVersion = 700;
-	else if(fileVersion == 2672) // 7.0 SR3
+	else if (buildVersion <2664) // 7.0 SR1 (2659-2663)
+		fileVersion = 701;
+	else if (buildVersion <2672) // 7.0 SR2 (2664-2671)
+		fileVersion = 702;
+	else if (buildVersion <2673) // 7.0 SR3 (2672-2672)
 		fileVersion = 703;
-	else if(fileVersion == 2673) // 7.0 E
+	else if (buildVersion <2766) // 7.0 SR4 (2673-2765)
 		fileVersion = 704;
-	else if(fileVersion >= 2766 && fileVersion <= 2769) // 7.5
+	else if (buildVersion <2878) // 7.5 (2766-2877)
 		fileVersion = 750;
-	else if(fileVersion >= 2876 && fileVersion <= 2906) // 8.0
+	else if (buildVersion <2881) // 8.0 SR0 (2878-2880)
 		fileVersion = 800;
-	else if(fileVersion >= 2907) // 8.1
+	else if (buildVersion <2892) // 8.0 SR1,SR2,SR3 (2878-2891)
+		fileVersion = 801;
+	else if (buildVersion <2944) // 8.0 SR4, 8.1 SR1-SR4 (2891-2943)
 		fileVersion = 810;
 	else {
-		LOG_PRINT(logfile, "Found unknown project version %d\n", fileVersion)
-		LOG_PRINT(logfile, "Please contact the authors of liborigin")
-#ifndef NO_CODE_GENERATION_FOR_LOG
-		unsigned int ioret;
-		ioret = fclose(logfile);
-#endif // NO_CODE_GENERATION_FOR_LOG
-		throw std::logic_error("Unknown project version");
+		fileVersion = 850; // 8.5 SR0 and newer (2944-)
+		LOG_PRINT(logfile, "Found project version 8.5 or newer\n")
 	}
-	if (fileVersion==810) {
-		LOG_PRINT(logfile, "Found project version 8.1 or newer\n")
-	} else {
+
+	if (fileVersion != 850) {
 		LOG_PRINT(logfile, "Found project version %.2f\n", fileVersion/100.0)
-	}*/
+	}
 	// Close logfile, will be reopened in parser routine.
 	// There are ways to keep logfile open and pass it to parser routine,
 	// but I choose to do the same as with 'file', close it and reopen in 'parse'
@@ -141,7 +147,7 @@ OriginFile::OriginFile(const string& fileName)
 
 bool OriginFile::parse(ProgressCallback callback, void *user_data)
 {
-	parser->setFileVersion(buildVersion);
+	parser->setBuildVersion(buildVersion);
 	return parser->parse(callback, user_data);
 }
 

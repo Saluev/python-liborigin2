@@ -41,7 +41,7 @@ bool Origin800Parser::parse(ProgressCallback callback, void *user_data)
     file.callback = callback;
     file.callback_user_data = user_data;    
     
-	if (fileVersion >= 2882)
+	if (buildVersion >= 2882)
 		d_colormap_offset = 0x25F;
 
 	unsigned int dataIndex = 0;

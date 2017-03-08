@@ -181,14 +181,14 @@ string OriginAnyParser::readObjectAsString(unsigned int size) {
 
 void OriginAnyParser::readFileVersion() {
 	// get file and program version, check it is a valid file
-	string fileVersion;
-	getline(file, fileVersion);
+	string sFileVersion;
+	getline(file, sFileVersion);
 
-	if ((fileVersion.substr(0,4) != "CPYA") or (*fileVersion.rbegin() != '#')) {
+	if ((sFileVersion.substr(0,4) != "CPYA") or (*sFileVersion.rbegin() != '#')) {
 		LOG_PRINT(logfile, "File, is not a valid opj file\n")
 		exit(1);
 	}
-	LOG_PRINT(logfile, "File version string: %s\n", fileVersion.c_str())
+	LOG_PRINT(logfile, "File version string: %s\n", sFileVersion.c_str())
 }
 
 void OriginAnyParser::readGlobalHeader() {
@@ -199,15 +199,25 @@ void OriginAnyParser::readGlobalHeader() {
 	LOG_PRINT(logfile, "Global header size: %d [0x%X], starts at %d [0x%X],", gh_size, gh_size, curpos, curpos)
 
 	// get global header data
-	if (0) {
-		// skip header
-		file.seekg(gh_size+1, ios_base::cur);
-	} else {
-		// read it into a string
-		string gh_data = readObjectAsString(gh_size);
-	}
+	string gh_data;
+	gh_data = readObjectAsString(gh_size);
+
 	curpos = file.tellg();
 	LOG_PRINT(logfile, " ends at %d [0x%X]\n", curpos, curpos)
+
+	// when gh_size > 0x1B, a double with fileVersion/100 can be read at gh_data[0x1B:0x23]
+	if (gh_size > 0x1B) {
+		istringstream stmp;
+		stmp.str(gh_data.substr(0x1B));
+		double dFileVersion;
+		GET_DOUBLE(stmp, dFileVersion)
+		if (dFileVersion > 8.5) {
+			fileVersion = (unsigned int)trunc(dFileVersion*100.);
+		} else {
+			fileVersion = 10*(unsigned int)trunc(dFileVersion*10.);
+		}
+		LOG_PRINT(logfile, "Project version as read from header: %.2f (%.6f)\n", fileVersion/100.0, dFileVersion)
+	}
 
 	// now read a zero size end mark
 	gh_endmark = readObjectSize();
