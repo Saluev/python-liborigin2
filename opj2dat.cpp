@@ -27,88 +27,89 @@
  ***************************************************************************/
 
 #include "OriginFile.h"
-#include <cstdio>
 #include <cmath>
-#include <cstring>
-#include <string.h>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+using namespace std;
+
 
 int main(int argc, char *argv[]) {
 	if(argc != 2) {
-		printf("Usage : ./opj2dat <file.opj>\n");
+		cout << "Usage : ./opj2dat <file.opj>" << endl;
 		return -1;
 	}
 
-	printf("opj2dat %s, Copyright (C) 2008 Stefan Gerlach\n",LIBORIGIN_VERSION_STRING);
+	cout << "opj2dat " << LIBORIGIN_VERSION_STRING << ", Copyright (C) 2008 Stefan Gerlach, 2017 Miquel Garriga" << endl;
 
 	if(!strcmp(argv[1],"-v"))
 		return 0;
 
 	OriginFile opj(argv[1]);
 	int status = opj.parse();
-	printf("Parsing status = %d\n",status);
-	printf("OPJ PROJECT \"%s\" VERSION = %.2f\n",argv[1],opj.version());
+	cout << "Parsing status = " << status << endl;
+	cout << "OPJ PROJECT \"" << argv[1] << "\" VERSION = " <<  opj.version() << endl;
 
-	printf("number of spreadsheets = %d\n",opj.spreadCount());
-	printf("number of matrixes     = %d\n",opj.matrixCount());
-	printf("number of functions    = %d\n",opj.functionCount());
-	printf("number of graphs       = %d\n",opj.graphCount());
-	printf("number of notes        = %d\n",opj.noteCount());
+	cout << "number of spreadsheets = " << opj.spreadCount() << endl;
+	cout << "number of matrixes     = " << opj.matrixCount() << endl;
+	cout << "number of functions    = " << opj.functionCount() << endl;
+	cout << "number of graphs       = " << opj.graphCount() << endl;
+	cout << "number of notes        = " << opj.noteCount() << endl;
+
 	for (unsigned int s=0;s<opj.spreadCount();s++) {
 		Origin::SpreadSheet spread = opj.spread(s);
 		int columnCount=spread.columns.size();
-		printf("Spreadsheet %d :\n", s+1);
-		printf(" Name: %s\n",spread.name.c_str());
-		printf(" Label: %s\n",spread.label.c_str());
-		printf("	Columns: %d\n",columnCount);
+		cout << "Spreadsheet " << (s+1) << endl;
+		cout << " Name: " << spread.name.c_str() << endl;
+		cout << " Label: " << spread.label.c_str() << endl;
+		cout << "	Columns: " << columnCount << endl;
 		for (int j=0;j<columnCount;j++) {
 			Origin::SpreadColumn column = spread.columns[j];
-			printf("	Column %d : %s / type : %d, rows : %d\n",
-				j+1,column.name.c_str(),column.type,spread.maxRows);
+			cout << "	Column " << (j+1) << " : " << column.name.c_str() << " / type : " << column.type << ", rows : " << spread.maxRows << endl;
 		}
-		FILE *out;
-		char * filename;
-		int ioret;
-#ifndef WIN32
-		ioret=asprintf(&filename,"%s.%d.dat",argv[1],s+1);
-#else
-		ioret=asprintf(&filename,"%s.%d.dat",basename(argv[1]),s+1);
-#endif
-		printf("saved to %s\n",filename);
-		if((out=fopen(filename,"w")) == NULL ) {
-			printf("Could not open %s",filename);
+
+		ostringstream sfilename;
+		sfilename << argv[1] << "." << (s+1) << ".dat";
+		cout << "saved to " << sfilename.str() << endl;
+
+		ofstream outf;
+		outf.open(sfilename.str().c_str(), ios_base::out);
+		if (!outf.good()) {
+			cout << "Could not open " << sfilename.str() << endl;
 			return -1;
 		}
 		// header
 		for (int j=0;j<columnCount;j++) {
-		    fprintf(out,"%s ",spread.columns[j].name.c_str());
-		    printf("%s ",spread.columns[j].name.c_str());
+		    outf << spread.columns[j].name.c_str() << "; ";
+			cout << spread.columns[j].name.c_str();
 		}
-		fprintf(out,"\n");
-		printf("\n Data: \n");
+		outf << endl;
+		cout << endl << " Data: " << endl;
 		// data
 		for (int i=0;i<(int)spread.maxRows;i++) {
 			for (int j=0;j<columnCount;j++) {
 				if (i<(int)spread.columns[j].data.size()) {
 					Origin::variant value=spread.columns[j].data[i];
-					if(spread.columns[j].type ==  Origin::SpreadColumn::Label) {
-						fprintf(out,"%s ",boost::get<string>(spread.columns[j].data[i]).c_str());
-					} else {
-					   double v=0.;
-					   if (value.type() == typeid(double)) {
-							v = boost::get<double>(value);
-							if(fabs(v)>2.0e-300) {
-							   fprintf(out,"%g ",v);
-							}
-						}
-					   if (value.type() == typeid(string)) {
-							fprintf(out,"%s ",boost::get<string>(value).c_str());
+					double v=0.;
+					if (value.type() == typeid(double)) {
+						v = boost::get<double>(value);
+						if (v != -1.23456789e-300) {
+							outf << v << "; ";
+						} else {
+							outf << nan("NaN") << "; ";
 						}
 					}
+					if (value.type() == typeid(string)) {
+						outf << boost::get<string>(value).c_str() << "; ";
+					}
+				} else {
+					outf << "; ";
 				}
 			}
-		   fprintf(out,"\n");
+		   outf << endl;
 		}
-		fclose(out);
+		outf.close();
 	}
 	return 0;
 }
