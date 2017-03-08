@@ -869,7 +869,7 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 	LOG_PRINT(logfile, "\n  data_type 0x%.4X, data_type_u 0x%.2X, valuesize %d [0x%X], %s [%s]\n", data_type, data_type_u, valuesize, valuesize, name.c_str(), column_name.c_str());
 
 	unsigned short signature;
-	if (col_header_size > 0x71) {
+	if (col_header_size > 0x72) {
 		stmp.str(col_header.substr(0x71));
 		GET_SHORT(stmp, signature);
 
