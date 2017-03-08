@@ -30,7 +30,6 @@
 #include "OriginDefaultParser.h"
 #include <stdio.h>
 #include <iostream>
-#include <stdlib.h>
 #include <math.h>
 
 using namespace Origin;
@@ -85,7 +84,7 @@ bool OriginDefaultParser::parse(ProgressCallback callback, void *user_data)
 	// get version
 	fseek(f,0x7,SEEK_SET);
 	ioret = fread(&vers,4,1,f);
-	int version = atoi(vers);
+	int version = strtol(vers, 0, 10);
 
 	unsigned char c=0;	// tmp char
 

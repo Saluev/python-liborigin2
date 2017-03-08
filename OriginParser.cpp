@@ -28,7 +28,6 @@
 
 #include "OriginParser.h"
 #include <algorithm>
-#include <cstdlib> // for atoi
 #include <boost/algorithm/string.hpp> // for iequals
 
 using namespace boost::algorithm;
@@ -175,7 +174,7 @@ void OriginParser::convertSpreadToExcel(vector<Origin::SpreadSheet>::size_type s
 		int pos = it->name.find_last_of("@");
 		if(pos != -1)
 		{
-			index = atoi(it->name.substr(pos + 1).c_str()) - 1;
+			index = strtol(it->name.substr(pos + 1).c_str(), 0, 10) - 1;
 			it->name = it->name.substr(0, pos);
 		}
 

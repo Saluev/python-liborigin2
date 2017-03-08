@@ -912,7 +912,7 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 
 		string::size_type sheetpos = speadSheets[spread].columns.back().name.find_last_of("@");
 		if(sheetpos != string::npos){
-			unsigned int sheet = atoi(column_name.substr(sheetpos + 1).c_str());
+			unsigned int sheet = strtol(column_name.substr(sheetpos + 1).c_str(), 0, 10);
 			if( sheet > 1){
 				speadSheets[spread].columns.back().name = column_name;
 

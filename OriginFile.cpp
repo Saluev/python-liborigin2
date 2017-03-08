@@ -28,21 +28,18 @@
  ***************************************************************************/
 
 #include "OriginFile.h"
-#include <cstdio>  // for fprintf
-#include <cstdlib> // for atoi
 #include <fstream>
 #include <string>
 
 OriginFile::OriginFile(const string& fileName)
 :	fileVersion(0)
 {
-	unsigned int ioret;  // return value of io functions
 	ifstream file(fileName.c_str(), ios_base::binary);
 
 	if (!file.is_open())
 	{
-		ioret = fprintf(stderr, "Could not open %s!\n", fileName.c_str());
-		return;
+		cerr <<  "Could not open " << fileName.c_str() << "!" << endl;
+		exit(EXIT_FAILURE);
 	}
 
 #ifndef NO_CODE_GENERATION_FOR_LOG
@@ -50,17 +47,17 @@ OriginFile::OriginFile(const string& fileName)
 	logfile = fopen("./opjfile.log", "w");
 	if (logfile == NULL)
 	{
-		ioret = fprintf(stderr, "Could not open opjfile.log !\n");
-		return;
+		cerr <<  "Could not open opjfile.log !" << endl;
+		exit(EXIT_FAILURE);
 	}
 #endif // NO_CODE_GENERATION_FOR_LOG
 
 	string vers;
 	getline(file, vers);
-	unsigned int majorVersion = atoi(vers.substr(5,1).c_str());
+	unsigned int majorVersion = strtol(vers.substr(5,1).c_str(),0,10);
 	char locale_decpoint = vers[6];
-	unsigned int buildVersion = atoi(vers.substr(7).c_str());
-	unsigned int buildNumber = atoi(vers.substr(12).c_str());
+	unsigned int buildVersion = strtol(vers.substr(7).c_str(),0,10);
+	unsigned int buildNumber = strtol(vers.substr(12).c_str(),0,10);
 	file.close();
 	LOG_PRINT(logfile, "File: %s\n", fileName.c_str())
 
