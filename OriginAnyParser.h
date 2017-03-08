@@ -54,6 +54,7 @@ protected:
 	unsigned int readFolderTree(unsigned int);
 	void readProjectLeave();
 	void readAttachmentList();
+	bool getColumnInfoAndData(string, unsigned int, string, unsigned int);
 
 	iendianfstream file;
 	FILE *logfile;

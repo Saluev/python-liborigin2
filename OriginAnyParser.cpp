@@ -24,6 +24,8 @@
 
 /* define a macro to get an int (or uint) from a istringstream in binary mode */
 #define GET_INT(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 4);};
+#define GET_SHORT(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 2);};
+#define GET_DOUBLE(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 8);};
 
 OriginAnyParser::OriginAnyParser(const string& fileName)
 :	file(fileName.c_str(),ios::binary)
@@ -244,6 +246,7 @@ bool OriginAnyParser::readDataSetElement() {
 	LOG_PRINT(logfile, "data size %d [0x%X], from %d [0x%X] to %d [0x%X],", dse_data_size, dse_data_size, dsd_start, dsd_start, curpos, curpos)
 
 	// get data values
+	getColumnInfoAndData(dse_header, dse_header_size, dse_data, dse_data_size);
 
 	// go to end of data values, get mask size (often zero)
 	file.seekg(dsd_start+dse_data_size, ios_base::beg); // dse_data_size can be zero
@@ -825,4 +828,159 @@ void OriginAnyParser::readAttachmentList() {
 	}
 
 	return;
+}
+
+bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_header_size, string col_data, unsigned int col_data_size) {
+	istringstream stmp(ios_base::binary);
+	static unsigned int dataIndex=0;
+	short data_type;
+	char data_type_u;
+	char valuesize;
+	string name(25,0), column_name;
+
+	stmp.str(col_header.substr(0x16));
+	GET_SHORT(stmp, data_type);
+
+	data_type_u = col_header[0x3F];
+	valuesize = col_header[0x3D];
+	if(valuesize == 0) {
+		LOG_PRINT(logfile, "	WARNING : found strange valuesize of %d\n", (int)valuesize);
+		valuesize = 10;
+	}
+
+	name = col_header.substr(0x58,25);
+	string::size_type colpos = name.find_last_of("_");
+
+	if(colpos != string::npos){
+		column_name = name.substr(colpos + 1);
+		name.resize(colpos);
+	}
+
+	LOG_PRINT(logfile, "\n  data_type 0x%.4X, data_type_u 0x%.2X, valuesize %d [0x%X], %s [%s]\n", data_type, data_type_u, valuesize, valuesize, name.c_str(), column_name.c_str());
+
+	unsigned short signature;
+	if (col_header_size > 0x71) {
+		stmp.str(col_header.substr(0x71));
+		GET_SHORT(stmp, signature);
+
+		int total_rows, first_row, last_row;
+		stmp.str(col_header.substr(0x19));
+		GET_INT(stmp, total_rows);
+		GET_INT(stmp, first_row);
+		GET_INT(stmp, last_row);
+		LOG_PRINT(logfile, "  total %d, first %d, last %d rows\n", total_rows, first_row, last_row)
+	} else {
+		LOG_PRINT(logfile, "  NOTE: alternative signature determination\n")
+		signature = col_header[0x18];
+	}
+	LOG_PRINT(logfile, "  signature %d [0x%X], valuesize %d size %d ", signature, signature, valuesize, col_data_size)
+
+
+	unsigned int current_col = 1;//, nr = 0, nbytes = 0;
+	static unsigned int col_index = 0;
+	unsigned int current_sheet = 0;
+	int spread = 0;
+
+	if (column_name.empty()) { // Matrix or function
+	} else {
+		if(speadSheets.size() == 0 || findSpreadByName(name) == -1) {
+			LOG_PRINT(logfile, "\n  NEW SPREADSHEET\n");
+			current_col = 1;
+			speadSheets.push_back(SpreadSheet(name));
+			spread = speadSheets.size() - 1;
+			speadSheets.back().maxRows = 0;
+			current_sheet = 0;
+		} else {
+			spread = findSpreadByName(name);
+			current_col = speadSheets[spread].columns.size();
+			if(!current_col)
+				current_col = 1;
+			++current_col;
+		}
+		speadSheets[spread].columns.push_back(SpreadColumn(column_name, dataIndex));
+		speadSheets[spread].columns.back().colIndex = ++col_index;
+
+		string::size_type sheetpos = speadSheets[spread].columns.back().name.find_last_of("@");
+		if(sheetpos != string::npos){
+			unsigned int sheet = atoi(column_name.substr(sheetpos + 1).c_str());
+			if( sheet > 1){
+				speadSheets[spread].columns.back().name = column_name;
+
+				if (current_sheet != (sheet - 1))
+					current_sheet = sheet - 1;
+
+				speadSheets[spread].columns.back().sheet = current_sheet;
+				if (speadSheets[spread].sheets < sheet)
+					speadSheets[spread].sheets = sheet;
+			}
+		}
+		++dataIndex;
+		LOG_PRINT(logfile, "  data index %d, valuesize %d, ", dataIndex, valuesize)
+
+		unsigned int nr = col_data_size / valuesize;
+		LOG_PRINT(logfile, "n. of rows = %d\n\n", nr)
+
+		speadSheets[spread].maxRows<nr ? speadSheets[spread].maxRows=nr : 0;
+		stmp.str(col_data);
+		for(unsigned int i = 0; i < nr; ++i)
+		{
+			double value;
+			if(valuesize <= 8)	// Numeric, Time, Date, Month, Day
+			{
+				GET_DOUBLE(stmp, value)
+				if ((i < 5) or (i > (nr-5))) {
+					LOG_PRINT(logfile, "%g ", value)
+				} else if (i == 5) {
+					LOG_PRINT(logfile, "... ")
+				}
+				speadSheets[spread].columns[(current_col-1)].data.push_back(value);
+			}
+			else if((data_type & 0x100) == 0x100) // Text&Numeric
+			{
+				unsigned char c = col_data[i*valuesize];
+				stmp.seekg(i*valuesize+2, ios_base::beg);
+				if(c == 0) //value
+				{
+					GET_DOUBLE(stmp, value);
+					if ((i < 5) or (i > (nr-5))) {
+						LOG_PRINT(logfile, "%g ", value)
+					} else if (i == 5) {
+						LOG_PRINT(logfile, "... ")
+					}
+					speadSheets[spread].columns[(current_col-1)].data.push_back(value);
+				}
+				else //text
+				{
+					string svaltmp = col_data.substr(i*valuesize+2, valuesize-2);
+					if(svaltmp.find(0x0E) != string::npos) { // try find non-printable symbol - garbage test
+						svaltmp = string();
+						LOG_PRINT(logfile, "Non printable symbol found, place 1 for i=%d\n", i)
+					}
+					if ((i < 5) or (i > (nr-5))) {
+						LOG_PRINT(logfile, "%s ", svaltmp.c_str())
+					} else if (i == 5) {
+						LOG_PRINT(logfile, "... ")
+					}
+					speadSheets[spread].columns[(current_col-1)].data.push_back(svaltmp);
+				}
+			}
+			else //text
+			{
+				string svaltmp = col_data.substr(i*valuesize, valuesize);
+				if(svaltmp.find(0x0E) != string::npos) { // try find non-printable symbol - garbage test
+					svaltmp = string();
+					LOG_PRINT(logfile, "Non printable symbol found, place 2 for i=%d\n", i)
+				}
+				if ((i < 5) or (i > (nr-5))) {
+					LOG_PRINT(logfile, "%s ", svaltmp.c_str())
+				} else if (i == 5) {
+					LOG_PRINT(logfile, "... ")
+				}
+				speadSheets[spread].columns[(current_col-1)].data.push_back(svaltmp);
+			}
+		}
+		LOG_PRINT(logfile, "\n\n")
+	}
+
+	return true;
 }
