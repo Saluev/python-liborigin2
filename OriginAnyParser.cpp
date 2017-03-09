@@ -949,7 +949,7 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 			{
 				unsigned char c = col_data[i*valuesize];
 				stmp.seekg(i*valuesize+2, ios_base::beg);
-				if(c == 0) //value
+				if(c != 1) //value
 				{
 					GET_DOUBLE(stmp, value);
 					if ((i < 5) or (i > (nr-5))) {
@@ -961,13 +961,14 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 				}
 				else //text
 				{
-					string svaltmp = col_data.substr(i*valuesize+2, valuesize-2);
+					string svaltmp = col_data.substr(i*valuesize+2, valuesize-2).c_str();
+					// TODO: check if this test is still needed
 					if(svaltmp.find(0x0E) != string::npos) { // try find non-printable symbol - garbage test
 						svaltmp = string();
 						LOG_PRINT(logfile, "Non printable symbol found, place 1 for i=%d\n", i)
 					}
 					if ((i < 5) or (i > (nr-5))) {
-						LOG_PRINT(logfile, "%s ", svaltmp.c_str())
+						LOG_PRINT(logfile, "\"%s\" ", svaltmp.c_str())
 					} else if (i == 5) {
 						LOG_PRINT(logfile, "... ")
 					}
@@ -976,13 +977,14 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 			}
 			else //text
 			{
-				string svaltmp = col_data.substr(i*valuesize, valuesize);
+				string svaltmp = col_data.substr(i*valuesize, valuesize).c_str();
+				// TODO: check if this test is still needed
 				if(svaltmp.find(0x0E) != string::npos) { // try find non-printable symbol - garbage test
 					svaltmp = string();
 					LOG_PRINT(logfile, "Non printable symbol found, place 2 for i=%d\n", i)
 				}
 				if ((i < 5) or (i > (nr-5))) {
-					LOG_PRINT(logfile, "%s ", svaltmp.c_str())
+					LOG_PRINT(logfile, "\"%s\" ", svaltmp.c_str())
 				} else if (i == 5) {
 					LOG_PRINT(logfile, "... ")
 				}
