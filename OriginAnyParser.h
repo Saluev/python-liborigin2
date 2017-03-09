@@ -56,11 +56,18 @@ protected:
 	void readAttachmentList();
 	bool getColumnInfoAndData(string, unsigned int, string, unsigned int);
 	void getMatrixValues(string, unsigned int, short, char, char, int);
+	void getWindowProperties(Window, string, unsigned int);
+
+	inline time_t doubleToPosixTime(double jdt)
+	{
+		/* 2440587.5 is julian date for the unixtime epoch */
+		return (time_t) floor((jdt - 2440587) * 86400. + 0.5);
+	}
 
 	iendianfstream file;
 	FILE *logfile;
 
-	unsigned int d_file_size;
+	unsigned int d_file_size, objectIndex;
 };
 
 #endif // ORIGIN_ANY_PARSER_H

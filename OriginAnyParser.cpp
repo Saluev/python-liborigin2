@@ -31,6 +31,7 @@
 OriginAnyParser::OriginAnyParser(const string& fileName)
 :	file(fileName.c_str(),ios::binary)
 {
+	objectIndex = 0;
 }
 
 bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
@@ -72,6 +73,14 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	LOG_PRINT(logfile, " ... done. Data sets: %d\n", dataset_list_size)
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "Now at %d [0x%X], filesize %d\n", curpos, curpos, d_file_size)
+
+	for(unsigned int i = 0; i < speadSheets.size(); ++i){
+		if(speadSheets[i].sheets > 1){
+			LOG_PRINT(logfile, "		CONVERT SPREADSHEET \"%s\" to EXCEL\n", speadSheets[i].name.c_str());
+			convertSpreadToExcel(i);
+			--i;
+		}
+	}
 
 	// get window list
 	unsigned int window_list_size = 0;
@@ -306,8 +315,31 @@ bool OriginAnyParser::readWindowElement() {
 
 	// get known info
 	string name(25,0);
-	name = wde_header.substr(0x02,25);
+	name = wde_header.substr(0x02,25).c_str();
 	LOG_PRINT(logfile, "%s\n", name.c_str())
+
+	// classify type of window
+	int ispread = findSpreadByName(name);
+	int imatrix = findMatrixByName(name);
+	int iexcel  = findExcelByName(name);
+	Origin::Window w;
+
+	if (ispread != -1) {
+		LOG_PRINT(logfile, "\n  Window is a Worksheet book\n")
+		w = speadSheets[ispread];
+	} else if (imatrix != -1) {
+		LOG_PRINT(logfile, "\n  Window is a Matrix book\n")
+		w = matrixes[imatrix];
+	} else if (iexcel != -1) {
+		LOG_PRINT(logfile, "\n  Window is an Excel book\n")
+		w = excels[iexcel];
+	} else {
+		LOG_PRINT(logfile, "\n  Window is a Graph\n")
+		graphs.push_back(Graph(name));
+		w = graphs.back();
+	}
+
+	getWindowProperties(w, wde_header, wde_header_size);
 
 	// go to end of window header
 	file.seekg(wdh_start+wde_header_size+1, ios_base::beg);
@@ -1129,5 +1161,57 @@ void OriginAnyParser::getMatrixValues(string col_data, unsigned int col_data_siz
 		LOG_PRINT(logfile, "	FIRST 10 CELL VALUES: ");
 		for(unsigned int i = 0; i < 10 && i < matrixes[mIndex].sheets.back().data.size(); ++i)
 			LOG_PRINT(logfile, "%g\t", matrixes[mIndex].sheets.back().data[i]);
+	}
+}
+
+void OriginAnyParser::getWindowProperties(Window window, string wde_header, unsigned int wde_header_size)
+{
+	window.objectID = objectIndex;
+	++objectIndex;
+
+	istringstream stmp;
+
+	stmp.str(wde_header.substr(0x1B));
+	GET_SHORT(stmp, window.frameRect.left)
+	GET_SHORT(stmp, window.frameRect.top)
+	GET_SHORT(stmp, window.frameRect.right)
+	GET_SHORT(stmp, window.frameRect.bottom)
+
+	char c = wde_header[0x32];
+
+	if(c & 0x01)
+		window.state = Window::Minimized;
+	else if(c & 0x02)
+		window.state = Window::Maximized;
+
+	c = wde_header[0x69];
+
+	if(c & 0x01)
+		window.title = Window::Label;
+	else if(c & 0x02)
+		window.title = Window::Name;
+	else
+		window.title = Window::Both;
+
+	window.hidden = (c & 0x08);
+	if (window.hidden) {
+		LOG_PRINT(logfile, "			WINDOW %d NAME : %s	is hidden\n", objectIndex, window.name.c_str());
+	} else {
+		LOG_PRINT(logfile, "			WINDOW %d NAME : %s	is not hidden\n", objectIndex, window.name.c_str());
+	}
+
+	if (wde_header_size < 0x83) return;
+
+	// only projects of version 6.0 and highr have these
+	double creationDate, modificationDate;
+	stmp.str(wde_header.substr(0x73));
+	GET_DOUBLE(stmp, creationDate);
+	window.creationDate = doubleToPosixTime(creationDate);
+	GET_DOUBLE(stmp, modificationDate)
+	window.modificationDate = doubleToPosixTime(modificationDate);
+
+	if(wde_header_size > 0xC3){
+		window.label = wde_header.substr(0xC3).c_str();
+		LOG_PRINT(logfile, "			WINDOW %d LABEL: %s\n", objectIndex, window.label.c_str());
 	}
 }
