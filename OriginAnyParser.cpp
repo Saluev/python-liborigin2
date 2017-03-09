@@ -25,6 +25,7 @@
 /* define a macro to get an int (or uint) from a istringstream in binary mode */
 #define GET_INT(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 4);};
 #define GET_SHORT(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 2);};
+#define GET_FLOAT(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 4);};
 #define GET_DOUBLE(iss, ovalue) {iss.read(reinterpret_cast<char *>(&ovalue), 8);};
 
 OriginAnyParser::OriginAnyParser(const string& fileName)
@@ -892,6 +893,26 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 	int spread = 0;
 
 	if (column_name.empty()) { // Matrix or function
+		if (valuesize == col_data_size) { // only one row: Function
+		} else { // Matrix
+			int mIndex = -1;
+			string::size_type pos = name.find_first_of("@");
+			if (pos != string::npos){
+				string sheetName = name;
+				name.resize(pos);
+				mIndex = findMatrixByName(name);
+				if (mIndex != -1){
+					LOG_PRINT(logfile, "\n  NEW MATRIX SHEET\n");
+					matrixes[mIndex].sheets.push_back(MatrixSheet(sheetName, dataIndex));
+				}
+			} else {
+				LOG_PRINT(logfile, "\n  NEW MATRIX\n");
+				matrixes.push_back(Matrix(name));
+				matrixes.back().sheets.push_back(MatrixSheet(name, dataIndex));
+			}
+			++dataIndex;
+			getMatrixValues(col_data, col_data_size, data_type, data_type_u, valuesize, mIndex);
+		}
 	} else {
 		if(speadSheets.size() == 0 || findSpreadByName(name) == -1) {
 			LOG_PRINT(logfile, "\n  NEW SPREADSHEET\n");
@@ -995,4 +1016,90 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 	}
 
 	return true;
+}
+
+void OriginAnyParser::getMatrixValues(string col_data, unsigned int col_data_size, short data_type, char data_type_u, char valuesize, int mIndex)
+{
+	if (matrixes.empty())
+		return;
+
+	istringstream stmp;
+	stmp.str(col_data);
+
+	if (mIndex < 0)
+		mIndex = matrixes.size() - 1;
+
+	int size = col_data_size/valuesize;
+	bool logValues = true;
+	switch(data_type){
+		case 0x6001://double
+			for(unsigned int i = 0; i < size; ++i){
+				double value;
+				GET_DOUBLE(stmp, value)
+				matrixes[mIndex].sheets.back().data.push_back((double)value);
+			}
+			break;
+		case 0x6003://float
+			for(unsigned int i = 0; i < size; ++i){
+				float value;
+				GET_FLOAT(stmp, value)
+				matrixes[mIndex].sheets.back().data.push_back((double)value);
+			}
+			break;
+		case 0x6801://int
+			if (data_type_u == 8){//unsigned
+				for(unsigned int i = 0; i < size; ++i){
+					unsigned int value;
+					GET_INT(stmp, value)
+					matrixes[mIndex].sheets.back().data.push_back((double)value);
+				}
+			} else {
+				for(unsigned int i = 0; i < size; ++i){
+					int value;
+					GET_INT(stmp, value)
+					matrixes[mIndex].sheets.back().data.push_back((double)value);
+				}
+			}
+			break;
+		case 0x6803://short
+			if (data_type_u == 8){//unsigned
+				for(unsigned int i = 0; i < size; ++i){
+					unsigned short value;
+					GET_SHORT(stmp, value)
+					matrixes[mIndex].sheets.back().data.push_back((double)value);
+				}
+			} else {
+				for(unsigned int i = 0; i < size; ++i){
+					short value;
+					GET_SHORT(stmp, value)
+					matrixes[mIndex].sheets.back().data.push_back((double)value);
+				}
+			}
+			break;
+		case 0x6821://char
+			if (data_type_u == 8){//unsigned
+				for(unsigned int i = 0; i < size; ++i){
+					unsigned char value;
+					value = col_data[i];
+					matrixes[mIndex].sheets.back().data.push_back((double)value);
+				}
+			} else {
+				for(unsigned int i = 0; i < size; ++i){
+					char value;
+					value = col_data[i];
+					matrixes[mIndex].sheets.back().data.push_back((double)value);
+				}
+			}
+			break;
+		default:
+			LOG_PRINT(logfile, "	UNKNOWN MATRIX DATATYPE: %02X SKIP DATA\n", data_type);
+			matrixes.pop_back();
+			logValues = false;
+	}
+
+	if (logValues){
+		LOG_PRINT(logfile, "	FIRST 10 CELL VALUES: ");
+		for(unsigned int i = 0; i < 10 && i < matrixes[mIndex].sheets.back().data.size(); ++i)
+			LOG_PRINT(logfile, "%g\t", matrixes[mIndex].sheets.back().data[i]);
+	}
 }

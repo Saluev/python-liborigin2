@@ -55,6 +55,7 @@ protected:
 	void readProjectLeave();
 	void readAttachmentList();
 	bool getColumnInfoAndData(string, unsigned int, string, unsigned int);
+	void getMatrixValues(string, unsigned int, short, char, char, int);
 
 	iendianfstream file;
 	FILE *logfile;
