@@ -143,6 +143,13 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
 	return true;
 }
 
+string toLowerCase(string str){
+	for (unsigned int i = 0; i < str.length(); i++)
+		if (str[i] >= 0x41 && str[i] <= 0x5A)
+			str[i] = str[i] + 0x20;
+	return str;
+}
+
 OriginParser* createOriginAnyParser(const string& fileName)
 {
 	return new OriginAnyParser(fileName);
@@ -894,6 +901,27 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 
 	if (column_name.empty()) { // Matrix or function
 		if (valuesize == col_data_size) { // only one row: Function
+			functions.push_back(Function(name, dataIndex));
+			++dataIndex;
+			Origin::Function &f = functions.back();
+			f.formula = toLowerCase(col_data.c_str());
+
+			stmp.str(col_header.substr(0x0A));
+			short t;
+			GET_SHORT(stmp, t)
+			if (t == 0x1194)
+				f.type = Function::Polar;
+
+			stmp.str(col_header.substr(0x21));
+			GET_INT(stmp, f.totalPoints)
+			GET_DOUBLE(stmp, f.begin)
+			double d;
+			GET_DOUBLE(stmp, d)
+			f.end = f.begin + d*(f.totalPoints - 1);
+
+			LOG_PRINT(logfile, "\n NEW FUNCTION: %s = %s", f.name.c_str(), f.formula.c_str());
+			LOG_PRINT(logfile, ". Range [%g : %g], number of points: %d\n", f.begin, f.end, f.totalPoints);
+
 		} else { // Matrix
 			int mIndex = -1;
 			string::size_type pos = name.find_first_of("@");
