@@ -59,6 +59,7 @@ protected:
 	void getWindowProperties(Origin::Window&, string, unsigned int);
 	void getLayerProperties(string, unsigned int);
 	Origin::Color getColor(string);
+	void getAnnotationProperties(string, unsigned int, string, unsigned int, string, unsigned int, string, unsigned int);
 
 	inline time_t doubleToPosixTime(double jdt)
 	{

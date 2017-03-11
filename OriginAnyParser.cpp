@@ -527,6 +527,9 @@ bool OriginAnyParser::readAnnotationElement() {
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "    annotation ends at %d [0x%X]\n", curpos, curpos)
 
+	// get annotation info
+	getAnnotationProperties(ane_header, ane_header_size, andt1_data, ane_data_1_size, andt2_data, ane_data_2_size, andt3_data, ane_data_3_size);
+
 	return true;
 }
 
@@ -1380,4 +1383,45 @@ Origin::Color OriginAnyParser::getColor(string strbincolor) {
 			break;
 	}
 	return result;
+}
+
+void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, string andt1, unsigned int andt1sz, string andt2, unsigned int andt2sz, string andt3, unsigned int andt3sz) {
+	istringstream stmp;
+
+	if (ispread != -1) {
+
+		string sec_name = anhd.substr(0x46,41).c_str();
+		int col_index = findColumnByName(ispread, sec_name);
+		if (col_index != -1){ //check if it is a formula
+			speadSheets[ispread].columns[col_index].command = andt1.c_str();
+			LOG_PRINT(logfile, "				Column: %s has formula: %s\n", sec_name.c_str(), speadSheets[ispread].columns[col_index].command.c_str())
+		}
+
+	} else if (imatrix != -1) {
+
+		MatrixSheet& sheet = matrixes[imatrix].sheets[ilayer];
+		string sec_name = anhd.substr(0x46,41).c_str();
+
+		stmp.str(andt1.c_str());
+		if (sec_name == "MV") {
+			sheet.command = andt1.c_str();
+		} else if (sec_name == "Y2") {
+			stmp >> sheet.coordinates[0];
+		} else if (sec_name == "X2") {
+			stmp >> sheet.coordinates[1];
+		} else if (sec_name == "Y1") {
+			stmp >> sheet.coordinates[2];
+		} else if (sec_name == "X1") {
+			stmp >> sheet.coordinates[3];
+		} else if (sec_name == "COLORMAP") {
+			// TODO: implement getColorMap (no example available)
+			// sheet.colorMap = getColorMap(andt1, andt2, andt3)
+		}
+
+	} else if (iexcel != -1) {
+
+	} else {
+
+	}
+	return;
 }
