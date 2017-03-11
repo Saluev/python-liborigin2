@@ -58,6 +58,7 @@ protected:
 	void getMatrixValues(string, unsigned int, short, char, char, int);
 	void getWindowProperties(string, unsigned int);
 	void getLayerProperties(string, unsigned int);
+	Origin::Color getColor(string);
 
 	inline time_t doubleToPosixTime(double jdt)
 	{

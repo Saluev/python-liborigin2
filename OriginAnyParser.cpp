@@ -1304,7 +1304,61 @@ void OriginAnyParser::getLayerProperties(string lye_header, unsigned int lye_hea
 		unsigned char border = lye_header[0x89];
 		glayer.borderType = (BorderType)(border >= 0x80 ? border-0x80 : None);
 
-		// if (lye_header_size > 0x107)
-		//	glayer.backgroundColor = getColor(lye_header.substr(0x105,4));
+		if (lye_header_size > 0x107)
+			glayer.backgroundColor = getColor(lye_header.substr(0x105,4));
 	}
+}
+
+Origin::Color OriginAnyParser::getColor(string strbincolor) {
+	/* decode a color value from a 4 byte binary string */
+	Origin::Color result;
+	unsigned char sbincolor[4];
+	for (int i=0; i < 4; i++) {
+		sbincolor[i] = strbincolor[i];
+	}
+	switch(sbincolor[3]) {
+		case 0:
+			if(sbincolor[0] < 0x64) {
+				result.type = Origin::Color::Regular;
+				result.regular = sbincolor[0];
+			} else {
+				switch(sbincolor[2]) {
+					case 0:
+						result.type = Origin::Color::Indexing;
+						break;
+					case 0x40:
+						result.type = Origin::Color::Mapping;
+						break;
+					case 0x80:
+						result.type = Origin::Color::RGB;
+						break;
+				}
+				result.column = sbincolor[0] - 0x64;
+			}
+			break;
+		case 1:
+			result.type = Origin::Color::Custom;
+			for(int i = 0; i < 3; ++i)
+				result.custom[i] = sbincolor[i];
+			break;
+		case 0x20:
+			result.type = Origin::Color::Increment;
+			result.starting = sbincolor[1];
+			break;
+		case 0xFF:
+			if(sbincolor[0] == 0xFC)
+				result.type = Origin::Color::None;
+			else if(sbincolor[0] == 0xF7)
+				result.type = Origin::Color::Automatic;
+			else {
+				result.type = Origin::Color::Regular;
+				result.regular = sbincolor[0];
+			}
+			break;
+		default:
+			result.type = Origin::Color::Regular;
+			result.regular = sbincolor[0];
+			break;
+	}
+	return result;
 }
