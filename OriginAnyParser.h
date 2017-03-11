@@ -56,7 +56,8 @@ protected:
 	void readAttachmentList();
 	bool getColumnInfoAndData(string, unsigned int, string, unsigned int);
 	void getMatrixValues(string, unsigned int, short, char, char, int);
-	void getWindowProperties(Window, string, unsigned int);
+	void getWindowProperties(string, unsigned int);
+	void getLayerProperties(string, unsigned int);
 
 	inline time_t doubleToPosixTime(double jdt)
 	{
@@ -68,6 +69,8 @@ protected:
 	FILE *logfile;
 
 	unsigned int d_file_size, objectIndex;
+	int ispread, imatrix, iexcel, igraph;
+	int ilayer;
 };
 
 #endif // ORIGIN_ANY_PARSER_H

@@ -319,27 +319,24 @@ bool OriginAnyParser::readWindowElement() {
 	LOG_PRINT(logfile, "%s\n", name.c_str())
 
 	// classify type of window
-	int ispread = findSpreadByName(name);
-	int imatrix = findMatrixByName(name);
-	int iexcel  = findExcelByName(name);
-	Origin::Window w;
+	ispread = findSpreadByName(name);
+	imatrix = findMatrixByName(name);
+	iexcel  = findExcelByName(name);
+	igraph = -1;
 
 	if (ispread != -1) {
 		LOG_PRINT(logfile, "\n  Window is a Worksheet book\n")
-		w = speadSheets[ispread];
 	} else if (imatrix != -1) {
 		LOG_PRINT(logfile, "\n  Window is a Matrix book\n")
-		w = matrixes[imatrix];
 	} else if (iexcel != -1) {
 		LOG_PRINT(logfile, "\n  Window is an Excel book\n")
-		w = excels[iexcel];
 	} else {
 		LOG_PRINT(logfile, "\n  Window is a Graph\n")
 		graphs.push_back(Graph(name));
-		w = graphs.back();
+		igraph = graphs.size()-1;
 	}
 
-	getWindowProperties(w, wde_header, wde_header_size);
+	getWindowProperties(wde_header, wde_header_size);
 
 	// go to end of window header
 	file.seekg(wdh_start+wde_header_size+1, ios_base::beg);
@@ -349,6 +346,7 @@ bool OriginAnyParser::readWindowElement() {
 
 	LOG_PRINT(logfile, " Reading Layers ...\n")
 	while (true) {
+		ilayer = layer_list_size;
 		if (!readLayerElement()) break;
 		layer_list_size++;
 	}
@@ -375,6 +373,7 @@ bool OriginAnyParser::readLayerElement() {
 	string lye_header = readObjectAsString(lye_header_size);
 
 	// get known info
+	getLayerProperties(lye_header, lye_header_size);
 
 	// go to end of layer header
 	file.seekg(lyh_start+lye_header_size+1, ios_base::beg);
@@ -1164,8 +1163,20 @@ void OriginAnyParser::getMatrixValues(string col_data, unsigned int col_data_siz
 	}
 }
 
-void OriginAnyParser::getWindowProperties(Window window, string wde_header, unsigned int wde_header_size)
+void OriginAnyParser::getWindowProperties(string wde_header, unsigned int wde_header_size)
 {
+	Origin::Window window;
+
+	if (ispread != -1) {
+		window = speadSheets[ispread];
+	} else if (imatrix != -1) {
+		window = matrixes[imatrix];
+	} else if (iexcel != -1) {
+		window = excels[iexcel];
+	} else {
+		window = graphs[igraph];
+	}
+
 	window.objectID = objectIndex;
 	++objectIndex;
 
@@ -1200,18 +1211,100 @@ void OriginAnyParser::getWindowProperties(Window window, string wde_header, unsi
 		LOG_PRINT(logfile, "			WINDOW %d NAME : %s	is not hidden\n", objectIndex, window.name.c_str());
 	}
 
-	if (wde_header_size < 0x83) return;
-
-	// only projects of version 6.0 and highr have these
-	double creationDate, modificationDate;
-	stmp.str(wde_header.substr(0x73));
-	GET_DOUBLE(stmp, creationDate);
-	window.creationDate = doubleToPosixTime(creationDate);
-	GET_DOUBLE(stmp, modificationDate)
-	window.modificationDate = doubleToPosixTime(modificationDate);
+	if (wde_header_size > 0x82) {
+		// only projects of version 6.0 and higher have these
+		double creationDate, modificationDate;
+		stmp.str(wde_header.substr(0x73));
+		GET_DOUBLE(stmp, creationDate);
+		window.creationDate = doubleToPosixTime(creationDate);
+		GET_DOUBLE(stmp, modificationDate)
+		window.modificationDate = doubleToPosixTime(modificationDate);
+	}
 
 	if(wde_header_size > 0xC3){
 		window.label = wde_header.substr(0xC3).c_str();
 		LOG_PRINT(logfile, "			WINDOW %d LABEL: %s\n", objectIndex, window.label.c_str());
+	}
+
+	if (igraph != -1) { // additional properties for graph/layout windows
+		stmp.str(wde_header.substr(0x23));
+		GET_SHORT(stmp, graphs[igraph].width)
+		GET_SHORT(stmp, graphs[igraph].height)
+
+		unsigned char c=wde_header[0x38];
+		graphs[igraph].connectMissingData = (c & 0x40);
+
+		string templateName = wde_header.substr(0x45,20).c_str();
+		graphs[igraph].templateName = templateName;
+		if (templateName == "LAYOUT") graphs[igraph].isLayout = true;
+	}
+}
+
+void OriginAnyParser::getLayerProperties(string lye_header, unsigned int lye_header_size)
+{
+	istringstream stmp;
+
+	if (ispread != -1) { // spreadsheet
+
+		speadSheets[ispread].loose = false;
+
+	} else if (imatrix != -1) { // matrix
+
+		unsigned char h = lye_header[0x29];
+		matrixes[imatrix].activeSheet = h;
+		h = lye_header[0x87];
+		matrixes[imatrix].header = (h == 194) ? Matrix::XY : Matrix::ColumnRow;
+
+	} else if (iexcel != -1) { // excel
+
+		excels[iexcel].loose = false;
+
+	} else { // graph
+		graphs[igraph].layers.push_back(GraphLayer());
+		GraphLayer glayer = graphs[igraph].layers[ilayer];
+
+		stmp.str(lye_header.substr(0x0F));
+		GET_DOUBLE(stmp, glayer.xAxis.min);
+		GET_DOUBLE(stmp, glayer.xAxis.max);
+		GET_DOUBLE(stmp, glayer.xAxis.step);
+
+		glayer.xAxis.majorTicks = lye_header[0x2B];
+
+		unsigned char g = lye_header[0x2D];
+		glayer.xAxis.zeroLine = (g & 0x80);
+		glayer.xAxis.oppositeLine = (g & 0x40);
+
+		glayer.xAxis.minorTicks = lye_header[0x37];
+		glayer.xAxis.scale = lye_header[0x38];
+
+		stmp.str(lye_header.substr(0x3A));
+		GET_DOUBLE(stmp, glayer.yAxis.min);
+		GET_DOUBLE(stmp, glayer.yAxis.max);
+		GET_DOUBLE(stmp, glayer.yAxis.step);
+
+		glayer.yAxis.majorTicks = lye_header[0x56];
+
+		g = lye_header[0x58];
+		glayer.yAxis.zeroLine = (g & 0x80);
+		glayer.yAxis.oppositeLine = (g & 0x40);
+
+		glayer.yAxis.minorTicks = lye_header[0x62];
+		glayer.yAxis.scale = lye_header[0x63];
+
+		g = lye_header[0x68];
+		glayer.gridOnTop = (g & 0x04);
+		glayer.exchangedAxes = (g & 0x40);
+
+		stmp.str(lye_header.substr(0x71));
+		GET_SHORT(stmp, glayer.clientRect.left)
+		GET_SHORT(stmp, glayer.clientRect.top)
+		GET_SHORT(stmp, glayer.clientRect.right)
+		GET_SHORT(stmp, glayer.clientRect.bottom)
+
+		unsigned char border = lye_header[0x89];
+		glayer.borderType = (BorderType)(border >= 0x80 ? border-0x80 : None);
+
+		// if (lye_header_size > 0x107)
+		//	glayer.backgroundColor = getColor(lye_header.substr(0x105,4));
 	}
 }
