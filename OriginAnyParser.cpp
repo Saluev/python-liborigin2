@@ -899,7 +899,7 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 		valuesize = 10;
 	}
 
-	name = col_header.substr(0x58,25);
+	name = col_header.substr(0x58,25).c_str();
 	string::size_type colpos = name.find_last_of("_");
 
 	if(colpos != string::npos){
