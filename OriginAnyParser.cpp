@@ -326,17 +326,19 @@ bool OriginAnyParser::readWindowElement() {
 
 	if (ispread != -1) {
 		LOG_PRINT(logfile, "\n  Window is a Worksheet book\n")
+		getWindowProperties(speadSheets[ispread], wde_header, wde_header_size);
 	} else if (imatrix != -1) {
 		LOG_PRINT(logfile, "\n  Window is a Matrix book\n")
+		getWindowProperties(matrixes[imatrix], wde_header, wde_header_size);
 	} else if (iexcel != -1) {
 		LOG_PRINT(logfile, "\n  Window is an Excel book\n")
+		getWindowProperties(excels[iexcel], wde_header, wde_header_size);
 	} else {
 		LOG_PRINT(logfile, "\n  Window is a Graph\n")
 		graphs.push_back(Graph(name));
 		igraph = graphs.size()-1;
+		getWindowProperties(graphs[igraph], wde_header, wde_header_size);
 	}
-
-	getWindowProperties(wde_header, wde_header_size);
 
 	// go to end of window header
 	file.seekg(wdh_start+wde_header_size+1, ios_base::beg);
@@ -1163,20 +1165,8 @@ void OriginAnyParser::getMatrixValues(string col_data, unsigned int col_data_siz
 	}
 }
 
-void OriginAnyParser::getWindowProperties(string wde_header, unsigned int wde_header_size)
+void OriginAnyParser::getWindowProperties(Origin::Window& window, string wde_header, unsigned int wde_header_size)
 {
-	Origin::Window window;
-
-	if (ispread != -1) {
-		window = speadSheets[ispread];
-	} else if (imatrix != -1) {
-		window = matrixes[imatrix];
-	} else if (iexcel != -1) {
-		window = excels[iexcel];
-	} else {
-		window = graphs[igraph];
-	}
-
 	window.objectID = objectIndex;
 	++objectIndex;
 
@@ -1226,6 +1216,14 @@ void OriginAnyParser::getWindowProperties(string wde_header, unsigned int wde_he
 		LOG_PRINT(logfile, "			WINDOW %d LABEL: %s\n", objectIndex, window.label.c_str());
 	}
 
+	if (imatrix != -1) { // additional properties for matrix windows
+		unsigned char h = wde_header[0x29];
+		matrixes[imatrix].activeSheet = h;
+		if (wde_header_size > 0x86) {
+			h = wde_header[0x87];
+			matrixes[imatrix].header = (h == 194) ? Matrix::XY : Matrix::ColumnRow;
+		}
+	}
 	if (igraph != -1) { // additional properties for graph/layout windows
 		stmp.str(wde_header.substr(0x23));
 		GET_SHORT(stmp, graphs[igraph].width)
