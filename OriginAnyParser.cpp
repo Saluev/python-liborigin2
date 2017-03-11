@@ -1248,10 +1248,30 @@ void OriginAnyParser::getLayerProperties(string lye_header, unsigned int lye_hea
 
 	} else if (imatrix != -1) { // matrix
 
-		unsigned char h = lye_header[0x29];
-		matrixes[imatrix].activeSheet = h;
-		h = lye_header[0x87];
-		matrixes[imatrix].header = (h == 194) ? Matrix::XY : Matrix::ColumnRow;
+		MatrixSheet& sheet = matrixes[imatrix].sheets[ilayer];
+
+		unsigned short width = 8;
+		stmp.str(lye_header.substr(0x27));
+		GET_SHORT(stmp, width)
+		if (width == 0) width = 8;
+		sheet.width = width;
+
+		stmp.str(lye_header.substr(0x2B));
+		GET_SHORT(stmp, sheet.columnCount)
+
+		stmp.str(lye_header.substr(0x52));
+		GET_SHORT(stmp, sheet.rowCount)
+
+		unsigned char view = lye_header[0x71];
+		if (view != 0x32 && view != 0x28){
+			sheet.view = MatrixSheet::ImageView;
+		} else {
+			sheet.view = MatrixSheet::DataView;
+		}
+
+		if (lye_header_size > 0xD2) {
+			sheet.name = lye_header.substr(0xD2,32).c_str();
+		}
 
 	} else if (iexcel != -1) { // excel
 
@@ -1259,7 +1279,7 @@ void OriginAnyParser::getLayerProperties(string lye_header, unsigned int lye_hea
 
 	} else { // graph
 		graphs[igraph].layers.push_back(GraphLayer());
-		GraphLayer glayer = graphs[igraph].layers[ilayer];
+		GraphLayer& glayer = graphs[igraph].layers[ilayer];
 
 		stmp.str(lye_header.substr(0x0F));
 		GET_DOUBLE(stmp, glayer.xAxis.min);
@@ -1304,6 +1324,7 @@ void OriginAnyParser::getLayerProperties(string lye_header, unsigned int lye_hea
 
 		if (lye_header_size > 0x107)
 			glayer.backgroundColor = getColor(lye_header.substr(0x105,4));
+
 	}
 }
 
