@@ -1420,7 +1420,303 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 
 	} else if (iexcel != -1) {
 
+		string sec_name = anhd.substr(0x46,41).c_str();
+		int col_index = findExcelColumnByName(iexcel, ilayer, sec_name);
+		if (col_index != -1){ //check if it is a formula
+			excels[iexcel].sheets[ilayer].columns[col_index].command = andt1.c_str();
+		}
+
 	} else {
+
+		GraphLayer& glayer = graphs[igraph].layers[ilayer];
+		string sec_name = anhd.substr(0x46,41).c_str();
+
+		Rect r;
+		stmp.str(anhd.substr(0x03));
+		GET_SHORT(stmp, r.left)
+		GET_SHORT(stmp, r.top)
+		GET_SHORT(stmp, r.right)
+		GET_SHORT(stmp, r.bottom)
+
+		unsigned char attach = anhd[0x28];
+		unsigned char border = anhd[0x29];
+
+		Color color = getColor(anhd.substr(0x33,4));
+
+		if (sec_name == "PL") glayer.yAxis.formatAxis[0].prefix = andt1.c_str();
+		if (sec_name == "PR") glayer.yAxis.formatAxis[1].prefix = andt1.c_str();
+		if (sec_name == "PB") glayer.xAxis.formatAxis[0].prefix = andt1.c_str();
+		if (sec_name == "PT") glayer.xAxis.formatAxis[1].prefix = andt1.c_str();
+		if (sec_name == "SL") glayer.yAxis.formatAxis[0].suffix = andt1.c_str();
+		if (sec_name == "SR") glayer.yAxis.formatAxis[1].suffix = andt1.c_str();
+		if (sec_name == "SB") glayer.xAxis.formatAxis[0].suffix = andt1.c_str();
+		if (sec_name == "ST") glayer.xAxis.formatAxis[1].suffix = andt1.c_str();
+		if (sec_name == "OL") glayer.yAxis.formatAxis[0].factor = andt1.c_str();
+		if (sec_name == "OR") glayer.yAxis.formatAxis[1].factor = andt1.c_str();
+		if (sec_name == "OB") glayer.xAxis.formatAxis[0].factor = andt1.c_str();
+		if (sec_name == "OT") glayer.xAxis.formatAxis[1].factor = andt1.c_str();
+
+		unsigned char type=andt1[0x00];
+		LineVertex begin, end;
+		/* OriginNNNParser identify line/arrow annotation by checking size of andt1
+		   Origin410: 21||24; Origin 500: 24; Origin 610: 24||96; Origin700 and higher: 120;
+		   An alternative is to look at anhd[0x02]:
+		     (0x21 for Circle/Rect, 0x22 for Line/Arrow, 0x23 for Polygon/Polyline)
+		 */
+		unsigned char ankind = anhd[0x02];
+		if (ankind == 0x22) {//Line/Arrow
+			if (attach == Origin::Scale) {
+				if (type == 2) {
+					stmp.str(andt1.substr(0x20));
+					GET_DOUBLE(stmp, begin.x)
+					GET_DOUBLE(stmp, end.x)
+					stmp.str(andt1.substr(0x40));
+					GET_DOUBLE(stmp, begin.y)
+					GET_DOUBLE(stmp, end.y)
+				} else if (type == 4) {//curved arrow: start point, 2 middle points and end point
+					stmp.str(andt1.substr(0x20));
+					GET_DOUBLE(stmp, begin.x)
+					GET_DOUBLE(stmp, end.x)
+					GET_DOUBLE(stmp, end.x)
+					GET_DOUBLE(stmp, end.x)
+					GET_DOUBLE(stmp, begin.y)
+					GET_DOUBLE(stmp, end.y)
+					GET_DOUBLE(stmp, end.y)
+					GET_DOUBLE(stmp, end.y)
+				}
+			} else {
+				short x1, x2, y1, y2;
+				if (type == 2) {//straight line/arrow
+					stmp.str(andt1.substr(0x01));
+					GET_SHORT(stmp, x1)
+					GET_SHORT(stmp, x2)
+					stmp.seekg(4, ios_base::cur);
+					GET_SHORT(stmp, y1)
+					GET_SHORT(stmp, y2)
+				} else if (type == 4) {//curved line/arrow has 4 points
+					stmp.str(andt1.substr(0x01));
+					GET_SHORT(stmp, x1)
+					stmp.seekg(4, ios_base::cur);
+					GET_SHORT(stmp, x2)
+					GET_SHORT(stmp, y1)
+					stmp.seekg(4, ios_base::cur);
+					GET_SHORT(stmp, y2)
+				}
+
+				double dx = fabs(x2 - x1);
+				double dy = fabs(y2 - y1);
+				double minx = (x1 <= x2) ? x1 : x2;
+				double miny = (y1 <= y2) ? y1 : y2;
+
+				begin.x = (x1 == x2) ? r.left + 0.5*r.width() : r.left + (x1 - minx)/dx*r.width();
+				end.x   = (x1 == x2) ? r.left + 0.5*r.width() : r.left + (x2 - minx)/dx*r.width();
+				begin.y = (y1 == y2) ? r.top  + 0.5*r.height(): r.top + (y1 - miny)/dy*r.height();
+				end.y   = (y1 == y2) ? r.top  + 0.5*r.height(): r.top + (y2 - miny)/dy*r.height();
+			}
+			unsigned char arrows = andt1[0x11];
+			switch (arrows) {
+				case 0:
+					begin.shapeType = 0;
+					end.shapeType = 0;
+					break;
+				case 1:
+					begin.shapeType = 1;
+					end.shapeType = 0;
+					break;
+				case 2:
+					begin.shapeType = 0;
+					end.shapeType = 1;
+					break;
+				case 3:
+					begin.shapeType = 1;
+					end.shapeType = 1;
+					break;
+			}
+			if (andt1sz > 0x77) {
+				begin.shapeType = andt1[0x60];
+				unsigned int w = 0;
+				stmp.str(andt1.substr(0x64));
+				GET_INT(stmp, w)
+				begin.shapeWidth = (double)w/500.0;
+				GET_INT(stmp, w)
+				begin.shapeLength = (double)w/500.0;
+
+				end.shapeType = andt1[0x6C];
+				stmp.str(andt1.substr(0x70));
+				GET_INT(stmp, w)
+				end.shapeWidth = (double)w/500.0;
+				GET_INT(stmp, w)
+				end.shapeLength = (double)w/500.0;
+			}
+		}
+		//text properties
+		short rotation;
+		stmp.str(andt1.substr(0x02));
+		GET_SHORT(stmp, rotation)
+		unsigned char fontSize = andt1[0x4];
+		unsigned char tab = andt1[0x0A];
+
+		//line properties
+		unsigned char lineStyle = andt1[0x12];
+		unsigned short w1;
+		stmp.str(andt1.substr(0x13));
+		GET_SHORT(stmp, w1)
+		double width = (double)w1/500.0;
+
+		Figure figure;
+		stmp.str(andt1.substr(0x05));
+		GET_SHORT(stmp, w1)
+		figure.width = (double)w1/500.0;
+		figure.style = andt1[0x08];
+
+		if (andt1sz > 0x4D) {
+			figure.fillAreaColor = getColor(andt1.substr(0x42,4));
+			stmp.str(andt1.substr(0x46));
+			GET_SHORT(stmp, w1)
+			figure.fillAreaPatternWidth = (double)w1/500.0;
+			figure.fillAreaPatternColor = getColor(andt1.substr(0x4A,4));
+			figure.fillAreaPattern = andt1[0x4E];
+		}
+		if (andt1sz > 0x56) {
+			unsigned char h = andt1[0x57];
+			figure.useBorderColor = (h == 0x10);
+		}
+
+		if (sec_name == "XB") {
+			string text = andt2.c_str();
+			glayer.xAxis.position = GraphAxis::Bottom;
+			glayer.xAxis.formatAxis[0].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
+		}
+		if (sec_name == "XT") {
+			string text = andt2.c_str();
+			glayer.xAxis.position = GraphAxis::Top;
+			glayer.xAxis.formatAxis[1].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
+		}
+		if (sec_name == "YL") {
+			string text = andt2.c_str();
+			glayer.yAxis.position = GraphAxis::Left;
+			glayer.yAxis.formatAxis[0].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
+		}
+		if (sec_name == "YR") {
+			string text = andt2.c_str();
+			glayer.yAxis.position = GraphAxis::Right;
+			glayer.yAxis.formatAxis[1].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
+		}
+		if (sec_name == "ZF") {
+			string text = andt2.c_str();
+			glayer.zAxis.position = GraphAxis::Front;
+			glayer.zAxis.formatAxis[0].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
+		}
+		if (sec_name == "ZB") {
+			string text = andt2.c_str();
+			glayer.zAxis.position = GraphAxis::Back;
+			glayer.zAxis.formatAxis[1].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
+		}
+		if (sec_name == "3D") {
+			stmp.str(andt2);
+			GET_DOUBLE(stmp, glayer.zAxis.min)
+			GET_DOUBLE(stmp, glayer.zAxis.max)
+			GET_DOUBLE(stmp, glayer.zAxis.step)
+			glayer.zAxis.majorTicks = andt2[0x1C];
+			glayer.zAxis.minorTicks = andt2[0x28];
+			glayer.zAxis.scale = andt2[0x29];
+
+			stmp.str(andt2.substr(0x5A));
+			GET_FLOAT(stmp, glayer.xAngle)
+			GET_FLOAT(stmp, glayer.yAngle)
+			GET_FLOAT(stmp, glayer.zAngle)
+
+			stmp.str(andt2.substr(0x218));
+			GET_FLOAT(stmp, glayer.xLength)
+			GET_FLOAT(stmp, glayer.yLength)
+			GET_FLOAT(stmp, glayer.zLength)
+			glayer.xLength /= 23.0;
+			glayer.yLength /= 23.0;
+			glayer.zLength /= 23.0;
+
+			glayer.orthographic3D = (andt2[0x240] != 0);
+		}
+		if (sec_name == "Legend") {
+			string text = andt2.c_str();
+			glayer.legend = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
+		}
+		if (sec_name == "__BCO2") { // histogram
+			stmp.str(andt2.substr(0x10));
+			GET_DOUBLE(stmp, glayer.histogramBin)
+			stmp.str(andt2.substr(0x20));
+			GET_DOUBLE(stmp, glayer.histogramEnd)
+			GET_DOUBLE(stmp, glayer.histogramBegin)
+
+			// TODO: check if 0x5E is right (obtained from anhdsz-0x46+93-andt1sz = 111-70+93-40 = 94)
+			glayer.percentile.p1SymbolType = andt2[0x5E];
+			glayer.percentile.p99SymbolType = andt2[0x5F];
+			glayer.percentile.meanSymbolType = andt2[0x60];
+			glayer.percentile.maxSymbolType = andt2[0x61];
+			glayer.percentile.minSymbolType = andt2[0x62];
+
+			// 0x9F = 0x5E+65
+			glayer.percentile.labels = andt2[0x9F];
+			// 0x6B = 0x5E+106-93 = 107
+			glayer.percentile.whiskersRange = andt2[0x6B];
+			glayer.percentile.boxRange = andt2[0x6C];
+			// 0x8e = 0x5E+141-93 = 142
+			glayer.percentile.whiskersCoeff = andt2[0x8e];
+			glayer.percentile.boxCoeff = andt2[0x8f];
+			unsigned char h = andt2[0x90];
+			glayer.percentile.diamondBox = (h == 0x82) ? true : false;
+			// 0xCB = 0x5E+109 = 203
+			stmp.str(andt2.substr(0xCB));
+			GET_SHORT(stmp, glayer.percentile.symbolSize)
+			glayer.percentile.symbolSize = glayer.percentile.symbolSize/2 + 1;
+			// 0x101 = 0x5E+163
+			glayer.percentile.symbolColor = getColor(andt2.substr(0x101,4));
+			glayer.percentile.symbolFillColor = getColor(andt2.substr(0x105,4));
+		}
+		if (sec_name == "_206") { // box plot labels
+		}
+		if (sec_name == "VLine") {
+			stmp.str(andt1.substr(0x0A));
+			double start;
+			GET_DOUBLE(stmp, start)
+			stmp.str(andt1.substr(0x1A));
+			double width;
+			GET_DOUBLE(stmp, start)
+			glayer.vLine = start + 0.5*width;
+			glayer.imageProfileTool = 2;
+		}
+		if (sec_name == "HLine") {
+			stmp.str(andt1.substr(0x12));
+			double start;
+			GET_DOUBLE(stmp, start)
+			stmp.str(andt1.substr(0x22));
+			double width;
+			GET_DOUBLE(stmp, start)
+			glayer.hLine = start + 0.5*width;
+			glayer.imageProfileTool = 2;
+		}
+		if (sec_name == "vline") {
+			stmp.str(andt1.substr(0x20));
+			GET_DOUBLE(stmp, glayer.vLine)
+			glayer.imageProfileTool = 1;
+		}
+		if (sec_name == "hline") {
+			stmp.str(andt1.substr(0x40));
+			GET_DOUBLE(stmp, glayer.hLine)
+			glayer.imageProfileTool = 1;
+		}
+		if (sec_name == "ZCOLORS") {
+			glayer.isXYY3D = true;
+		}
+		if (sec_name == "SPECTRUM1") {
+			glayer.isXYY3D = false;
+			glayer.colorScale.visible = true;
+			unsigned char h = andt1[0x18];
+			glayer.colorScale.reverseOrder = h;
+			stmp.str(andt1.substr(0x20));
+			GET_SHORT(stmp, glayer.colorScale.colorBarThickness)
+			GET_SHORT(stmp, glayer.colorScale.labelGap)
+			glayer.colorScale.labelsColor = getColor(andt1.substr(0x5C,4));
+		}
 
 	}
 	return;
