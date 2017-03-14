@@ -567,6 +567,9 @@ bool OriginAnyParser::readCurveElement() {
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "to %d [0x%X]: %s\n", curpos, curpos, name.c_str())
 
+	// get annotation info
+	getCurveProperties(cve_header, cve_header_size, cve_data, cve_data_size);
+
 	return true;
 }
 
@@ -1809,4 +1812,133 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 
 	}
 	return;
+}
+
+void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, string cvedt, unsigned int cvedtsz) {
+	istringstream stmp;
+
+	if (ispread != -1) { // spreadsheet: curves are columns
+
+		// TODO: check that spreadsheet columns are stored in proper order
+		// vector<SpreadColumn> header;
+		unsigned char c = cvehd[0x11];
+		string name = cvehd.substr(0x12).c_str();
+		unsigned short width = 0;
+		stmp.str(cvehd.substr(0x4A));
+		GET_SHORT(stmp, width)
+		int col_index = findColumnByName(ispread, name);
+		if (col_index != -1) {
+			if (speadSheets[ispread].columns[col_index].name != name)
+				speadSheets[ispread].columns[col_index].name = name;
+
+			SpreadColumn::ColumnType type;
+			switch(c){
+				case 3:
+					type = SpreadColumn::X;
+					break;
+				case 0:
+					type = SpreadColumn::Y;
+					break;
+				case 5:
+					type = SpreadColumn::Z;
+					break;
+				case 6:
+					type = SpreadColumn::XErr;
+					break;
+				case 2:
+					type = SpreadColumn::YErr;
+					break;
+				case 4:
+					type = SpreadColumn::Label;
+					break;
+				default:
+					type = SpreadColumn::NONE;
+					break;
+			}
+			const char* colTypeNames[] = {"X", "Y", "Z", "XErr", "YErr", "Label", "None"};
+			cout << "ci " << col_index << " Spreadsheet: " << speadSheets[ispread].name.c_str() << ", column: " << name.c_str() << ", type: " << type << " " << colTypeNames[type] << endl;
+			speadSheets[ispread].columns[col_index].type = type;
+
+			width /= 0xA;
+			if(width == 0) width = 8;
+			speadSheets[ispread].columns[col_index].width = width;
+			unsigned char c1 = cvehd[0x1E];
+			unsigned char c2 = cvehd[0x1F];
+			switch (c1) {
+				case 0x00: // Numeric	   - Dec1000
+				case 0x09: // Text&Numeric - Dec1000
+				case 0x10: // Numeric	   - Scientific
+				case 0x19: // Text&Numeric - Scientific
+				case 0x20: // Numeric	   - Engeneering
+				case 0x29: // Text&Numeric - Engeneering
+				case 0x30: // Numeric	   - Dec1,000
+				case 0x39: // Text&Numeric - Dec1,000
+					speadSheets[ispread].columns[col_index].valueType = (c1%0x10 == 0x9) ? TextNumeric : Numeric;
+					speadSheets[ispread].columns[col_index].valueTypeSpecification = c1 / 0x10;
+					if (c2 >= 0x80) {
+						speadSheets[ispread].columns[col_index].significantDigits = c2 - 0x80;
+						speadSheets[ispread].columns[col_index].numericDisplayType = SignificantDigits;
+					} else if (c2 > 0) {
+						speadSheets[ispread].columns[col_index].decimalPlaces = c2 - 0x03;
+						speadSheets[ispread].columns[col_index].numericDisplayType = DecimalPlaces;
+					}
+					break;
+				case 0x02: // Time
+					speadSheets[ispread].columns[col_index].valueType = Time;
+					speadSheets[ispread].columns[col_index].valueTypeSpecification = c2 - 0x80;
+					break;
+				case 0x03: // Date
+				case 0x33:
+					speadSheets[ispread].columns[col_index].valueType = Date;
+					speadSheets[ispread].columns[col_index].valueTypeSpecification= c2 - 0x80;
+					break;
+				case 0x31: // Text
+					speadSheets[ispread].columns[col_index].valueType = Text;
+					break;
+				case 0x4: // Month
+				case 0x34:
+					speadSheets[ispread].columns[col_index].valueType = Month;
+					speadSheets[ispread].columns[col_index].valueTypeSpecification = c2;
+					break;
+				case 0x5: // Day
+				case 0x35:
+					speadSheets[ispread].columns[col_index].valueType = Day;
+					speadSheets[ispread].columns[col_index].valueTypeSpecification = c2;
+					break;
+				default: // Text
+					speadSheets[ispread].columns[col_index].valueType = Text;
+					break;
+			}
+			if (cvedtsz > 0) {
+				speadSheets[ispread].columns[col_index].comment = cvedt.c_str();
+			}
+			// TODO: check that spreadsheet columns are stored in proper order
+			// header.push_back(speadSheets[ispread].columns[col_index]);
+		}
+		// TODO: check that spreadsheet columns are stored in proper order
+		// for (unsigned int i = 0; i < header.size(); i++)
+		// 	speadSheets[spread].columns[i] = header[i];
+
+	} else if (imatrix != -1) {
+
+		MatrixSheet sheet = matrixes[imatrix].sheets[ilayer];
+		unsigned char c1 = cvehd[0x1E];
+		unsigned char c2 = cvehd[0x1F];
+
+		sheet.valueTypeSpecification = c1/0x10;
+		if (c2 >= 0x80) {
+			sheet.significantDigits = c2-0x80;
+			sheet.numericDisplayType = SignificantDigits;
+		} else if (c2 > 0) {
+			sheet.decimalPlaces = c2-0x03;
+			sheet.numericDisplayType = DecimalPlaces;
+		}
+
+		matrixes[imatrix].sheets[ilayer] = sheet;
+
+	} else if (iexcel != -1) {
+
+	} else {
+
+	}
 }
