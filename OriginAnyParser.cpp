@@ -1855,8 +1855,6 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 					type = SpreadColumn::NONE;
 					break;
 			}
-			const char* colTypeNames[] = {"X", "Y", "Z", "XErr", "YErr", "Label", "None"};
-			cout << "ci " << col_index << " Spreadsheet: " << speadSheets[ispread].name.c_str() << ", column: " << name.c_str() << ", type: " << type << " " << colTypeNames[type] << endl;
 			speadSheets[ispread].columns[col_index].type = type;
 
 			width /= 0xA;
@@ -2026,6 +2024,298 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 		}
 
 	} else {
+
+		GraphLayer& glayer = graphs[igraph].layers[ilayer];
+		glayer.curves.push_back(GraphCurve());
+		GraphCurve& curve(glayer.curves.back());
+
+		unsigned char h = cvehd[0x26];
+		curve.hidden = (h == 33);
+		curve.type = cvehd[0x4C];
+		if (curve.type == GraphCurve::XYZContour || curve.type == GraphCurve::Contour)
+			glayer.isXYY3D = false;
+
+		unsigned short w;
+		stmp.str(cvehd.substr(0x04));
+		GET_SHORT(stmp, w)
+		pair<string, string> column = findDataByIndex(w-1);
+		short nColY = w;
+		if (column.first.size() > 0) {
+			curve.dataName = column.first;
+			if (glayer.is3D() || (curve.type == GraphCurve::XYZContour)) {
+				curve.zColumnName = column.second;
+			} else {
+				curve.yColumnName = column.second;
+			}
+		}
+
+		stmp.str(cvehd.substr(0x23));
+		GET_SHORT(stmp, w)
+		column = findDataByIndex(w-1);
+		if (column.first.size() > 0) {
+			curve.xDataName = (curve.dataName != column.first) ? column.first : "";
+			if (glayer.is3D() || (curve.type == GraphCurve::XYZContour)) {
+				curve.yColumnName = column.second;
+			} else if (glayer.isXYY3D){
+				curve.xColumnName = column.second;
+			} else {
+				curve.xColumnName = column.second;
+			}
+		}
+
+		stmp.str(cvehd.substr(0x4D));
+		GET_SHORT(stmp, w)
+		column = findDataByIndex(w-1);
+		if (column.first.size() > 0 && (glayer.is3D() || (curve.type == GraphCurve::XYZContour))) {
+			curve.xColumnName = column.second;
+			if (curve.dataName != column.first) {
+				// graph X and Y from different tables
+			}
+		}
+
+		if (glayer.is3D() || glayer.isXYY3D) graphs[igraph].is3D = true;
+
+		curve.lineConnect = cvehd[0x11];
+		curve.lineStyle = cvehd[0x12];
+		curve.boxWidth = cvehd[0x14];
+
+		stmp.str(cvehd.substr(0x15));
+		GET_SHORT(stmp, w)
+		curve.lineWidth = (double)w/500.0;
+
+		stmp.str(cvehd.substr(0x19));
+		GET_SHORT(stmp, w)
+		curve.symbolSize = (double)w/500.0;
+
+		h = cvehd[0x1C];
+		curve.fillArea = (h==2);
+		curve.fillAreaType = cvehd[0x1E];
+
+		//text
+		if (curve.type == GraphCurve::TextPlot) {
+			stmp.str(cvehd.substr(0x13));
+			GET_SHORT(stmp, curve.text.rotation)
+			curve.text.rotation /= 10;
+			GET_SHORT(stmp, curve.text.fontSize)
+
+			h = cvehd[0x19];
+			switch (h) {
+				case 26:
+					curve.text.justify = TextProperties::Center;
+					break;
+				case 2:
+					curve.text.justify = TextProperties::Right;
+					break;
+				default:
+					curve.text.justify = TextProperties::Left;
+					break;
+			}
+
+			h = cvehd[0x20];
+			curve.text.fontUnderline = (h & 0x1);
+			curve.text.fontItalic = (h & 0x2);
+			curve.text.fontBold = (h & 0x8);
+			curve.text.whiteOut = (h & 0x20);
+
+			char offset = cvehd[0x37];
+			curve.text.xOffset = offset * 5;
+			offset = cvehd[0x38];
+			curve.text.yOffset = offset * 5;
+		}
+
+		//vector
+		if (curve.type == GraphCurve::FlowVector || curve.type == GraphCurve::Vector) {
+			stmp.str(cvehd.substr(0x56));
+			GET_FLOAT(stmp, curve.vector.multiplier)
+
+			h = cvehd[0x5E];
+			column = findDataByIndex(nColY - 1 + h - 0x64);
+			if (column.first.size() > 0)
+				curve.vector.endXColumnName = column.second;
+
+			h = cvehd[0x62];
+			column = findDataByIndex(nColY - 1 + h - 0x64);
+			if (column.first.size() > 0)
+				curve.vector.endYColumnName = column.second;
+
+			h = cvehd[0x18];
+			if (h >= 0x64) {
+				column = findDataByIndex(nColY - 1 + h - 0x64);
+				if (column.first.size() > 0)
+					curve.vector.angleColumnName = column.second;
+			} else if (h <= 0x08)
+				curve.vector.constAngle = 45*h;
+
+			h = cvehd[0x19];
+			if (h >= 0x64){
+				column = findDataByIndex(nColY - 1 + h - 0x64);
+				if (column.first.size() > 0)
+					curve.vector.magnitudeColumnName = column.second;
+			} else
+				curve.vector.constMagnitude = (int)curve.symbolSize;
+
+			stmp.str(cvehd.substr(0x66));
+			GET_SHORT(stmp, curve.vector.arrowLenght)
+			curve.vector.arrowAngle = cvehd[0x68];
+
+			h = cvehd[0x69];
+			curve.vector.arrowClosed = !(h & 0x1);
+
+			stmp.str(cvehd.substr(0x70));
+			GET_SHORT(stmp, w)
+			curve.vector.width = (double)w/500.0;
+
+			h = cvehd[0x142];
+			switch (h) {
+				case 2:
+					curve.vector.position = VectorProperties::Midpoint;
+					break;
+				case 4:
+					curve.vector.position = VectorProperties::Head;
+					break;
+				default:
+					curve.vector.position = VectorProperties::Tail;
+					break;
+			}
+		}
+		//pie
+		if (curve.type == GraphCurve::Pie) {
+			h = cvehd[0x92];
+
+			curve.pie.formatPercentages = (h & 0x01);
+			curve.pie.formatValues		= (h & 0x02);
+			curve.pie.positionAssociate = (h & 0x08);
+			curve.pie.clockwiseRotation = (h & 0x20);
+			curve.pie.formatCategories	= (h & 0x80);
+
+			curve.pie.formatAutomatic = cvehd[0x93];
+			stmp.str(cvehd.substr(0x94));
+			GET_SHORT(stmp, curve.pie.distance)
+			curve.pie.viewAngle = cvehd[0x96];
+			curve.pie.thickness = cvehd[0x98];
+
+			stmp.str(cvehd.substr(0x9A));
+			GET_SHORT(stmp, curve.pie.rotation)
+
+			stmp.str(cvehd.substr(0x9E));
+			GET_SHORT(stmp, curve.pie.displacement)
+
+			stmp.str(cvehd.substr(0xA0));
+			GET_SHORT(stmp, curve.pie.radius)
+			GET_SHORT(stmp, curve.pie.horizontalOffset)
+
+			stmp.str(cvehd.substr(0xA6));
+			GET_INT(stmp, curve.pie.displacedSectionCount)
+		}
+		//surface
+		if (glayer.isXYY3D || curve.type == GraphCurve::Mesh3D) {
+			curve.surface.type = cvehd[0x17];
+			h = cvehd[0x1C];
+			if ((h & 0x60) == 0x60)
+				curve.surface.grids = SurfaceProperties::X;
+			else if (h & 0x20)
+				curve.surface.grids = SurfaceProperties::Y;
+			else if (h & 0x40)
+				curve.surface.grids = SurfaceProperties::None;
+			else
+				curve.surface.grids = SurfaceProperties::XY;
+
+			curve.surface.sideWallEnabled = (h & 0x10);
+			curve.surface.frontColor = getColor(cvehd.substr(0x1D,4));
+
+			stmp.str(cvehd.substr(0x14C));
+			GET_SHORT(stmp, w)
+			curve.surface.gridLineWidth = (double)w/500.0;
+
+			curve.surface.gridColor = getColor(cvehd.substr(0x14E,4));
+
+			h = cvehd[0x13];
+			curve.surface.backColorEnabled = (h & 0x08);
+
+			curve.surface.backColor = getColor(cvehd.substr(0x15A,4));
+			curve.surface.xSideWallColor = getColor(cvehd.substr(0x15E,4));
+			curve.surface.ySideWallColor = getColor(cvehd.substr(0x162,4));
+
+			curve.surface.surface.fill = (h & 0x10);
+			curve.surface.surface.contour = (h & 0x40);
+			stmp.str(cvehd.substr(0x94));
+			GET_SHORT(stmp, w)
+			curve.surface.surface.lineWidth = (double)w/500.0;
+			curve.surface.surface.lineColor = getColor(cvehd.substr(0x96,4));
+
+			curve.surface.topContour.fill = (h & 0x02);
+			curve.surface.topContour.contour = (h & 0x04);
+			stmp.str(cvehd.substr(0xB4));
+			GET_SHORT(stmp, w)
+			curve.surface.topContour.lineWidth = (double)w/500.0;
+			curve.surface.topContour.lineColor = getColor(cvehd.substr(0xB6,4));
+
+			curve.surface.bottomContour.fill = (h & 0x80);
+			curve.surface.bottomContour.contour = (h & 0x01);
+			stmp.str(cvehd.substr(0xA4));
+			GET_SHORT(stmp, w)
+			curve.surface.bottomContour.lineWidth = (double)w/500.0;
+			curve.surface.bottomContour.lineColor = getColor(cvehd.substr(0xA6,4));
+		}
+		if (curve.type == GraphCurve::Mesh3D || curve.type == GraphCurve::Contour || curve.type == GraphCurve::XYZContour) {
+			if (curve.type == GraphCurve::Contour || curve.type == GraphCurve::XYZContour) glayer.isXYY3D = false;
+			ColorMap& colorMap = (curve.type == GraphCurve::Mesh3D ? curve.surface.colorMap : curve.colorMap);
+			h = cvehd[0x13];
+			colorMap.fillEnabled = (h & 0x82);
+
+			if (curve.type == GraphCurve::Contour) {
+				stmp.str(cvehd.substr(0x7A));
+				GET_SHORT(stmp, curve.text.fontSize)
+
+				h = cvehd[0x83];
+				curve.text.fontUnderline = (h & 0x1);
+				curve.text.fontItalic = (h & 0x2);
+				curve.text.fontBold = (h & 0x8);
+				curve.text.whiteOut = (h & 0x20);
+
+						file.seekg(2, ios_base::cur);
+				curve.text.color = getColor(cvehd.substr(0x86,4));
+			}
+			// TODO: replace d_colormap_offset by appropiate hex value
+			// file.seekg(LAYER + d_colormap_offset, ios_base::beg);
+			// readColorMap(colorMap);
+			cout << "readColorMap and d_colormap_offset not implemented" << endl;
+		}
+
+		curve.fillAreaColor = getColor(cvehd.substr(0xC2,4));
+		stmp.str(cvehd.substr(0xC6));
+		GET_SHORT(stmp, w)
+		curve.fillAreaPatternWidth = (double)w/500.0;
+
+		curve.fillAreaPatternColor = getColor(cvehd.substr(0xCA,4));
+		curve.fillAreaPattern = cvehd[0xCE];
+		curve.fillAreaPatternBorderStyle = cvehd[0xCF];
+		stmp.str(cvehd.substr(0xD0));
+		GET_SHORT(stmp, w)
+		curve.fillAreaPatternBorderWidth = (double)w/500.0;
+		curve.fillAreaPatternBorderColor = getColor(cvehd.substr(0xD2,4));
+
+		curve.fillAreaTransparency = cvehd[0x11E];
+
+		curve.lineColor = getColor(cvehd.substr(0x16A,4));
+
+		if (curve.type != GraphCurve::Contour) curve.text.color = curve.lineColor;
+
+		stmp.str(cvehd.substr(0x17));
+		GET_SHORT(stmp, curve.symbolType)
+
+		curve.symbolFillColor = getColor(cvehd.substr(0x12E,4));
+		curve.symbolColor = getColor(cvehd.substr(0x132,4));
+		curve.vector.color = curve.symbolColor;
+
+		h = cvehd[0x136];
+		curve.symbolThickness = (h == 255 ? 1 : h);
+		curve.pointOffset = cvehd[0x137];
+		h = cvehd[0x138];
+		curve.symbolFillTransparency = cvehd[0x139];
+
+		h = cvehd[0x143];
+		curve.connectSymbols = (h&0x8);
 
 	}
 }
