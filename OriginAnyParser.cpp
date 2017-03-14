@@ -1232,7 +1232,7 @@ void OriginAnyParser::getWindowProperties(Origin::Window& window, string wde_hea
 		GET_SHORT(stmp, graphs[igraph].width)
 		GET_SHORT(stmp, graphs[igraph].height)
 
-		unsigned char c=wde_header[0x38];
+		unsigned char c = wde_header[0x38];
 		graphs[igraph].connectMissingData = (c & 0x40);
 
 		string templateName = wde_header.substr(0x45,20).c_str();
@@ -1456,7 +1456,7 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 		if (sec_name == "OB") glayer.xAxis.formatAxis[0].factor = andt1.c_str();
 		if (sec_name == "OT") glayer.xAxis.formatAxis[1].factor = andt1.c_str();
 
-		unsigned char type=andt1[0x00];
+		unsigned char type = andt1[0x00];
 		LineVertex begin, end;
 		/* OriginNNNParser identify line/arrow annotation by checking size of andt1
 		   Origin410: 21||24; Origin 500: 24; Origin 610: 24||96; Origin700 and higher: 120;
@@ -1587,32 +1587,32 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 			glayer.xAxis.position = GraphAxis::Bottom;
 			glayer.xAxis.formatAxis[0].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
 		}
-		if (sec_name == "XT") {
+		else if (sec_name == "XT") {
 			string text = andt2.c_str();
 			glayer.xAxis.position = GraphAxis::Top;
 			glayer.xAxis.formatAxis[1].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
 		}
-		if (sec_name == "YL") {
+		else if (sec_name == "YL") {
 			string text = andt2.c_str();
 			glayer.yAxis.position = GraphAxis::Left;
 			glayer.yAxis.formatAxis[0].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
 		}
-		if (sec_name == "YR") {
+		else if (sec_name == "YR") {
 			string text = andt2.c_str();
 			glayer.yAxis.position = GraphAxis::Right;
 			glayer.yAxis.formatAxis[1].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
 		}
-		if (sec_name == "ZF") {
+		else if (sec_name == "ZF") {
 			string text = andt2.c_str();
 			glayer.zAxis.position = GraphAxis::Front;
 			glayer.zAxis.formatAxis[0].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
 		}
-		if (sec_name == "ZB") {
+		else if (sec_name == "ZB") {
 			string text = andt2.c_str();
 			glayer.zAxis.position = GraphAxis::Back;
 			glayer.zAxis.formatAxis[1].label = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
 		}
-		if (sec_name == "3D") {
+		else if (sec_name == "3D") {
 			stmp.str(andt2);
 			GET_DOUBLE(stmp, glayer.zAxis.min)
 			GET_DOUBLE(stmp, glayer.zAxis.max)
@@ -1636,11 +1636,11 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 
 			glayer.orthographic3D = (andt2[0x240] != 0);
 		}
-		if (sec_name == "Legend") {
+		else if (sec_name == "Legend") {
 			string text = andt2.c_str();
 			glayer.legend = TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach);
 		}
-		if (sec_name == "__BCO2") { // histogram
+		else if (sec_name == "__BCO2") { // histogram
 			stmp.str(andt2.substr(0x10));
 			GET_DOUBLE(stmp, glayer.histogramBin)
 			stmp.str(andt2.substr(0x20));
@@ -1672,9 +1672,9 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 			glayer.percentile.symbolColor = getColor(andt2.substr(0x101,4));
 			glayer.percentile.symbolFillColor = getColor(andt2.substr(0x105,4));
 		}
-		if (sec_name == "_206") { // box plot labels
+		else if (sec_name == "_206") { // box plot labels
 		}
-		if (sec_name == "VLine") {
+		else if (sec_name == "VLine") {
 			stmp.str(andt1.substr(0x0A));
 			double start;
 			GET_DOUBLE(stmp, start)
@@ -1684,7 +1684,7 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 			glayer.vLine = start + 0.5*width;
 			glayer.imageProfileTool = 2;
 		}
-		if (sec_name == "HLine") {
+		else if (sec_name == "HLine") {
 			stmp.str(andt1.substr(0x12));
 			double start;
 			GET_DOUBLE(stmp, start)
@@ -1694,20 +1694,20 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 			glayer.hLine = start + 0.5*width;
 			glayer.imageProfileTool = 2;
 		}
-		if (sec_name == "vline") {
+		else if (sec_name == "vline") {
 			stmp.str(andt1.substr(0x20));
 			GET_DOUBLE(stmp, glayer.vLine)
 			glayer.imageProfileTool = 1;
 		}
-		if (sec_name == "hline") {
+		else if (sec_name == "hline") {
 			stmp.str(andt1.substr(0x40));
 			GET_DOUBLE(stmp, glayer.hLine)
 			glayer.imageProfileTool = 1;
 		}
-		if (sec_name == "ZCOLORS") {
+		else if (sec_name == "ZCOLORS") {
 			glayer.isXYY3D = true;
 		}
-		if (sec_name == "SPECTRUM1") {
+		else if (sec_name == "SPECTRUM1") {
 			glayer.isXYY3D = false;
 			glayer.colorScale.visible = true;
 			unsigned char h = andt1[0x18];
