@@ -1717,6 +1717,95 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 			GET_SHORT(stmp, glayer.colorScale.labelGap)
 			glayer.colorScale.labelsColor = getColor(andt1.substr(0x5C,4));
 		}
+		else if (sec_name == "&0") {
+			glayer.isWaterfall = true;
+			string text = andt1.c_str();
+			string::size_type commaPos = text.find_first_of(",");
+			stmp.str(text.substr(0,commaPos));
+			stmp >> glayer.xOffset;
+			stmp.str(text.substr(commaPos+1));
+			stmp >> glayer.yOffset;
+		}
+		/* OriginNNNParser identify text, circle, rectangle and bitmap annotation by checking size of andt1:
+		             text/pie text          rectangle/circle       line            bitmap
+		   Origin410: 22                    0xA(10)                21/24           38
+		   Origin500: 22                    0xA(10)                24              40
+		   Origin610: 22                    0xA(10)                24/96           40
+		   Origin700:                       0x5E(94)               120             0x28(40)
+		   Origin750: 0x3E(62)/78           0x5E(94)              0x78(120)        0x28(40)
+		   Origin850: 0x3E(62)/78           0x5E(94)              0x78(120)        0x28(40)
+		   An alternative is to look at anhd[0x02]:
+		     (0x00 for Text, 0x21 for Circle/Rect, 0x22 for Line/Arrow, 0x23 for Polygon/Polyline)
+		*/
+		else if ((ankind == 0x0) && (sec_name != "DelData")) { // text
+			string text = andt2.c_str();
+			if (sec_name.substr(0,3) == "PIE")
+				glayer.pieTexts.push_back(TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach));
+			else
+				glayer.texts.push_back(TextBox(text, r, color, fontSize, rotation/10, tab, (BorderType)(border >= 0x80 ? border-0x80 : None), (Attach)attach));
+		}
+		else if (ankind == 0x21) { // rectangle & circle
+			switch (type) { // type = andt1[0x00]
+				case 0:
+				case 1:
+					figure.type = Figure::Rectangle;
+					break;
+				case 2:
+				case 3:
+					figure.type = Figure::Circle;
+					break;
+			}
+			figure.clientRect = r;
+			figure.attach = (Attach)attach;
+			figure.color = color;
+
+			glayer.figures.push_back(figure);
+		}
+		else if ((ankind == 0x22) && (sec_name != "sLine") && (sec_name != "sline")) { // line/arrow
+			glayer.lines.push_back(Line());
+			Line& line(glayer.lines.back());
+			line.color = color;
+			line.clientRect = r;
+			line.attach = (Attach)attach;
+			line.width = width;
+			line.style = lineStyle;
+			line.begin = begin;
+			line.end = end;
+		}
+		else if (andt1sz == 40) { // bitmap
+			if (type == 4) { // type = andt1[0x00]
+				unsigned long filesize = andt2sz + 14;
+				glayer.bitmaps.push_back(Bitmap());
+				Bitmap& bitmap(glayer.bitmaps.back());
+				bitmap.clientRect = r;
+				bitmap.attach = (Attach)attach;
+				bitmap.size = filesize;
+				bitmap.borderType = (BorderType)(border >= 0x80 ? border-0x80 : None);
+				bitmap.data = new unsigned char[filesize];
+				unsigned char* data = bitmap.data;
+				//add Bitmap header
+				memcpy(data, "BM", 2);
+				data += 2;
+				memcpy(data, &filesize, 4);
+				data += 4;
+				unsigned int d = 0;
+				memcpy(data, &d, 4);
+				data += 4;
+				d = 0x36;
+				memcpy(data, &d, 4);
+				data += 4;
+				memcpy(data, andt2.c_str(), andt2sz);
+			} else if (type == 6) {
+				// TODO check if 0x5E is right (obtained from anhdsz-0x46+93-andt1sz = 111-70+93-40 = 94)
+				string gname = andt2.substr(0x5E).c_str();
+				glayer.bitmaps.push_back(Bitmap(gname));
+				Bitmap& bitmap(glayer.bitmaps.back());
+				bitmap.clientRect = r;
+				bitmap.attach = (Attach)attach;
+				bitmap.size = 0;
+				bitmap.borderType = (BorderType)(border >= 0x80 ? border-0x80 : None);
+			}
+		}
 
 	}
 	return;
