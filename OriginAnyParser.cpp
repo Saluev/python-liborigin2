@@ -1938,6 +1938,93 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 
 	} else if (iexcel != -1) {
 
+		unsigned char c = cvehd[0x11];
+		string name = cvehd.substr(0x12).c_str();
+		unsigned short width = 0;
+		stmp.str(cvehd.substr(0x4A));
+		GET_SHORT(stmp, width)
+		int col_index = findExcelColumnByName(iexcel, ilayer, name);
+		if (col_index != -1) {
+			SpreadColumn::ColumnType type;
+			switch(c){
+				case 3:
+					type = SpreadColumn::X;
+					break;
+				case 0:
+					type = SpreadColumn::Y;
+					break;
+				case 5:
+					type = SpreadColumn::Z;
+					break;
+				case 6:
+					type = SpreadColumn::XErr;
+					break;
+				case 2:
+					type = SpreadColumn::YErr;
+					break;
+				case 4:
+					type = SpreadColumn::Label;
+					break;
+				default:
+					type = SpreadColumn::NONE;
+					break;
+			}
+			excels[iexcel].sheets[ilayer].columns[col_index].type = type;
+			width /= 0xA;
+			if (width == 0) width = 8;
+			excels[iexcel].sheets[ilayer].columns[col_index].width = width;
+
+			unsigned char c1 = cvehd[0x1E];
+			unsigned char c2 = cvehd[0x1F];
+			switch (c1) {
+				case 0x00: // Numeric	   - Dec1000
+				case 0x09: // Text&Numeric - Dec1000
+				case 0x10: // Numeric	   - Scientific
+				case 0x19: // Text&Numeric - Scientific
+				case 0x20: // Numeric	   - Engeneering
+				case 0x29: // Text&Numeric - Engeneering
+				case 0x30: // Numeric	   - Dec1,000
+				case 0x39: // Text&Numeric - Dec1,000
+					excels[iexcel].sheets[ilayer].columns[col_index].valueType = (c1%0x10 == 0x9) ? TextNumeric : Numeric;
+					excels[iexcel].sheets[ilayer].columns[col_index].valueTypeSpecification = c1 / 0x10;
+					if (c2 >= 0x80) {
+						excels[iexcel].sheets[ilayer].columns[col_index].significantDigits = c2 - 0x80;
+						excels[iexcel].sheets[ilayer].columns[col_index].numericDisplayType = SignificantDigits;
+					} else if (c2 > 0) {
+						excels[iexcel].sheets[ilayer].columns[col_index].decimalPlaces = c2 - 0x03;
+						excels[iexcel].sheets[ilayer].columns[col_index].numericDisplayType = DecimalPlaces;
+					}
+					break;
+				case 0x02: // Time
+					excels[iexcel].sheets[ilayer].columns[col_index].valueType = Time;
+					excels[iexcel].sheets[ilayer].columns[col_index].valueTypeSpecification = c2 - 0x80;
+					break;
+				case 0x03: // Date
+					excels[iexcel].sheets[ilayer].columns[col_index].valueType = Date;
+					excels[iexcel].sheets[ilayer].columns[col_index].valueTypeSpecification = c2 - 0x80;
+					break;
+				case 0x31: // Text
+					excels[iexcel].sheets[ilayer].columns[col_index].valueType = Text;
+					break;
+				case 0x04: // Month
+				case 0x34:
+					excels[iexcel].sheets[ilayer].columns[col_index].valueType = Month;
+					excels[iexcel].sheets[ilayer].columns[col_index].valueTypeSpecification = c2;
+					break;
+				case 0x05: // Day
+				case 0x35:
+					excels[iexcel].sheets[ilayer].columns[col_index].valueType = Day;
+					excels[iexcel].sheets[ilayer].columns[col_index].valueTypeSpecification = c2;
+					break;
+				default: // Text
+					excels[iexcel].sheets[ilayer].columns[col_index].valueType = Text;
+					break;
+			}
+			if (cvedtsz > 0) {
+				excels[iexcel].sheets[ilayer].columns[col_index].comment = cvedt.c_str();
+			}
+		}
+
 	} else {
 
 	}
