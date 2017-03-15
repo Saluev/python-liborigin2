@@ -616,6 +616,9 @@ bool OriginAnyParser::readAxisParameterElement(unsigned int naxis) {
 	// go to end of axis break data
 	file.seekg(apd_start+ape_data_size+1, ios_base::beg);
 
+	// get axis parameter info
+	getAxisParameterProperties(apd_data, ape_data_size, naxis);
+
 	return true;
 }
 
@@ -2359,6 +2362,225 @@ void OriginAnyParser::getAxisBreakProperties(string abdata, unsigned int abdatas
 			glayer.yAxisBreak.log10 = (h == 1);
 			glayer.yAxisBreak.minorTicksAfter = abdata[0x2C];
 		}
+
+	}
+}
+
+void OriginAnyParser::getAxisParameterProperties(string apdata, unsigned int apdatasz, int naxis) {
+	istringstream stmp;
+	static int iaxispar = 0;
+
+	if (igraph != -1) {
+		unsigned char h = 0;
+		unsigned short w = 0;
+
+		GraphLayer& glayer = graphs[igraph].layers[ilayer];
+		GraphAxis axis = glayer.xAxis;
+		if (naxis == 1) {
+			axis = glayer.xAxis;
+		} else if (naxis == 2) {
+			axis = glayer.yAxis;
+		} else if (naxis == 3) {
+			axis = glayer.zAxis;
+		}
+		if (iaxispar == 0) { // minor Grid
+			h = apdata[0x26];
+			axis.minorGrid.hidden = (h==0);
+			axis.minorGrid.color = apdata[0x0F];
+			axis.minorGrid.style = apdata[0x12];
+			stmp.str(apdata.substr(0x15));
+			GET_SHORT(stmp, w)
+			axis.minorGrid.width = (double)w/500.0;
+		} else if (iaxispar == 1) { // major Grid
+			h = apdata[0x26];
+			axis.majorGrid.hidden = (h==0);
+			axis.majorGrid.color = apdata[0x0F];
+			axis.majorGrid.style = apdata[0x12];
+			stmp.str(apdata.substr(0x15));
+			GET_SHORT(stmp, w)
+			axis.majorGrid.width = (double)w/500.0;
+		} else if (iaxispar == 2) { // tickaxis 0
+			h = apdata[0x26];
+			axis.tickAxis[0].showMajorLabels = (h & 0x40);
+			axis.tickAxis[0].color = apdata[0x0F];
+			stmp.str(apdata.substr(0x13));
+			GET_SHORT(stmp, w)
+			axis.tickAxis[0].rotation = w/10;
+			GET_SHORT(stmp, w)
+			axis.tickAxis[0].fontSize = w;
+			h = apdata[0x1A];
+			axis.tickAxis[0].fontBold = (h & 0x08);
+			stmp.str(apdata.substr(0x23));
+			GET_SHORT(stmp, w)
+			h = apdata[0x25];
+			unsigned char h1 = apdata[0x26];
+			axis.tickAxis[0].valueType = (ValueType)(h & 0x0F);
+			pair<string, string> column;
+			switch (axis.tickAxis[0].valueType) {
+				case Numeric:
+					/*switch ((h>>4)) {
+						case 0x9:
+							axis.tickAxis[0].valueTypeSpecification=1;
+							break;
+						case 0xA:
+							axis.tickAxis[0].valueTypeSpecification=2;
+							break;
+						case 0xB:
+							axis.tickAxis[0].valueTypeSpecification=3;
+							break;
+						default:
+							axis.tickAxis[0].valueTypeSpecification=0;
+					}*/
+					if ((h>>4) > 7) {
+						axis.tickAxis[0].valueTypeSpecification = (h>>4) - 8;
+						axis.tickAxis[0].decimalPlaces = h1 - 0x40;
+					} else {
+						axis.tickAxis[0].valueTypeSpecification = (h>>4);
+						axis.tickAxis[0].decimalPlaces = -1;
+					}
+					break;
+				case Time:
+				case Date:
+				case Month:
+				case Day:
+				case ColumnHeading:
+					axis.tickAxis[0].valueTypeSpecification = h1 - 0x40;
+					break;
+				case Text:
+				case TickIndexedDataset:
+				case Categorical:
+					column = findDataByIndex(w-1);
+					if (column.first.size() > 0) {
+						axis.tickAxis[0].dataName = column.first;
+						axis.tickAxis[0].columnName = column.second;
+					}
+					break;
+				default: // Numeric Decimal 1.000
+					axis.tickAxis[0].valueType = Numeric;
+					axis.tickAxis[0].valueTypeSpecification = 0;
+					break;
+			}
+		} else if (iaxispar == 3) { // formataxis 0
+			h = apdata[0x26];
+			axis.formatAxis[0].hidden = (h == 0);
+			axis.formatAxis[0].color = apdata[0x0F];
+			stmp.str(apdata.substr(0x4A));
+			GET_SHORT(stmp, w)
+			axis.formatAxis[0].majorTickLength = (double)w/10.0;
+			stmp.str(apdata.substr(0x15));
+			GET_SHORT(stmp, w)
+			axis.formatAxis[0].thickness = (double)w/500.0;
+			h = apdata[0x25];
+			axis.formatAxis[0].minorTicksType = (h>>6);
+			axis.formatAxis[0].majorTicksType = ((h>>4) & 3);
+			axis.formatAxis[0].axisPosition = (h & 0x0F);
+			switch (axis.formatAxis[0].axisPosition) { // TODO: check if correct
+				case 1:
+					h = apdata[0x37];
+					axis.formatAxis[0].axisPositionValue = (double)h;
+					break;
+				case 2:
+					stmp.str(apdata.substr(0x2F));
+					GET_DOUBLE(stmp, axis.formatAxis[0].axisPositionValue)
+					break;
+			}
+		} else if (iaxispar == 4) { // tickaxis 1
+			h = apdata[0x26];
+			axis.tickAxis[1].showMajorLabels = (h & 0x40);
+			axis.tickAxis[1].color = apdata[0x0F];
+			stmp.str(apdata.substr(0x13));
+			GET_SHORT(stmp, w)
+			axis.tickAxis[1].rotation = w/10;
+			GET_SHORT(stmp, w)
+			axis.tickAxis[1].fontSize = w;
+			h = apdata[0x1A];
+			axis.tickAxis[1].fontBold = (h & 0x08);
+			stmp.str(apdata.substr(0x23));
+			GET_SHORT(stmp, w)
+			h = apdata[0x25];
+			unsigned char h1 = apdata[0x26];
+			axis.tickAxis[1].valueType = (ValueType)(h & 0x0F);
+			pair<string, string> column;
+			switch (axis.tickAxis[1].valueType) {
+				case Numeric:
+					/*switch ((h>>4)) {
+						case 0x9:
+							axis.tickAxis[1].valueTypeSpecification=1;
+							break;
+						case 0xA:
+							axis.tickAxis[1].valueTypeSpecification=2;
+							break;
+						case 0xB:
+							axis.tickAxis[1].valueTypeSpecification=3;
+							break;
+						default:
+							axis.tickAxis[1].valueTypeSpecification=0;
+					}*/
+					if ((h>>4) > 7) {
+						axis.tickAxis[1].valueTypeSpecification = (h>>4) - 8;
+						axis.tickAxis[1].decimalPlaces = h1 - 0x40;
+					} else {
+						axis.tickAxis[1].valueTypeSpecification = (h>>4);
+						axis.tickAxis[1].decimalPlaces = -1;
+					}
+					break;
+				case Time:
+				case Date:
+				case Month:
+				case Day:
+				case ColumnHeading:
+					axis.tickAxis[1].valueTypeSpecification = h1 - 0x40;
+					break;
+				case Text:
+				case TickIndexedDataset:
+				case Categorical:
+					column = findDataByIndex(w-1);
+					if (column.first.size() > 0) {
+						axis.tickAxis[1].dataName = column.first;
+						axis.tickAxis[1].columnName = column.second;
+					}
+					break;
+				default: // Numeric Decimal 1.000
+					axis.tickAxis[1].valueType = Numeric;
+					axis.tickAxis[1].valueTypeSpecification = 0;
+				break;
+			}
+		} else if (iaxispar == 5) { // formataxis 1
+			h = apdata[0x26];
+			axis.formatAxis[1].hidden = (h == 0);
+			axis.formatAxis[1].color = apdata[0x0F];
+			stmp.str(apdata.substr(0x4A));
+			GET_SHORT(stmp, w)
+			axis.formatAxis[1].majorTickLength = (double)w/10.0;
+			stmp.str(apdata.substr(0x15));
+			GET_SHORT(stmp, w)
+			axis.formatAxis[1].thickness = (double)w/500.0;
+			h = apdata[0x25];
+			axis.formatAxis[1].minorTicksType = (h>>6);
+			axis.formatAxis[1].majorTicksType = ((h>>4) & 3);
+			axis.formatAxis[1].axisPosition = (h & 0x0F);
+			switch (axis.formatAxis[1].axisPosition) { // TODO: check if correct
+				case 1:
+					h = apdata[0x37];
+					axis.formatAxis[1].axisPositionValue = (double)h;
+					break;
+				case 2:
+					stmp.str(apdata.substr(0x2F));
+					GET_DOUBLE(stmp, axis.formatAxis[1].axisPositionValue)
+					break;
+			}
+		}
+
+		if (naxis == 1) {
+			glayer.xAxis = axis;
+		} else if (naxis == 2) {
+			glayer.yAxis = axis;
+		} else if (naxis == 3) {
+			glayer.zAxis = axis;
+		}
+
+		iaxispar++;
+		iaxispar %= 6;
 
 	}
 }

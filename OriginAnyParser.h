@@ -62,6 +62,7 @@ protected:
 	void getAnnotationProperties(string, unsigned int, string, unsigned int, string, unsigned int, string, unsigned int);
 	void getCurveProperties(string, unsigned int, string, unsigned int);
 	void getAxisBreakProperties(string, unsigned int);
+	void getAxisParameterProperties(string, unsigned int, int);
 
 	inline time_t doubleToPosixTime(double jdt)
 	{
