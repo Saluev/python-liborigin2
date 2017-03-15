@@ -34,8 +34,7 @@ OriginAnyParser::OriginAnyParser(const string& fileName)
 	objectIndex = 0;
 }
 
-bool OriginAnyParser::parse(ProgressCallback callback, void *user_data)
-{
+bool OriginAnyParser::parse(ProgressCallback callback, void *user_data) {
 	file.callback = callback;
 	file.callback_user_data = user_data;
 
@@ -567,7 +566,7 @@ bool OriginAnyParser::readCurveElement() {
 	curpos = file.tellg();
 	LOG_PRINT(logfile, "to %d [0x%X]: %s\n", curpos, curpos, name.c_str())
 
-	// get annotation info
+	// get curve (or column) info
 	getCurveProperties(cve_header, cve_header_size, cve_data, cve_data_size);
 
 	return true;
@@ -1085,8 +1084,7 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 	return true;
 }
 
-void OriginAnyParser::getMatrixValues(string col_data, unsigned int col_data_size, short data_type, char data_type_u, char valuesize, int mIndex)
-{
+void OriginAnyParser::getMatrixValues(string col_data, unsigned int col_data_size, short data_type, char data_type_u, char valuesize, int mIndex) {
 	if (matrixes.empty())
 		return;
 
@@ -1171,8 +1169,7 @@ void OriginAnyParser::getMatrixValues(string col_data, unsigned int col_data_siz
 	}
 }
 
-void OriginAnyParser::getWindowProperties(Origin::Window& window, string wde_header, unsigned int wde_header_size)
-{
+void OriginAnyParser::getWindowProperties(Origin::Window& window, string wde_header, unsigned int wde_header_size) {
 	window.objectID = objectIndex;
 	++objectIndex;
 
@@ -1244,8 +1241,7 @@ void OriginAnyParser::getWindowProperties(Origin::Window& window, string wde_hea
 	}
 }
 
-void OriginAnyParser::getLayerProperties(string lye_header, unsigned int lye_header_size)
-{
+void OriginAnyParser::getLayerProperties(string lye_header, unsigned int lye_header_size) {
 	istringstream stmp;
 
 	if (ispread != -1) { // spreadsheet
