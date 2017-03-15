@@ -685,6 +685,9 @@ bool OriginAnyParser::readNoteElement() {
 	string nwe_contents = readObjectAsString(nwe_contents_size);
 	LOG_PRINT(logfile, "  contents at %d [0x%X]: \n%s\n", nwc_start, nwc_start, nwe_contents.c_str())
 
+	// get note window info
+	getNoteProperties(nwe_header, nwe_header_size, nwe_label, nwe_label_size, nwe_contents, nwe_contents_size);
+
 	return true;
 }
 
@@ -2582,5 +2585,72 @@ void OriginAnyParser::getAxisParameterProperties(string apdata, unsigned int apd
 		iaxispar++;
 		iaxispar %= 6;
 
+	}
+}
+
+void OriginAnyParser::getNoteProperties(string nwehd, unsigned int nwehdsz, string nwelb, unsigned int nwelbsz, string nwect, unsigned int nwectsz) {
+	istringstream stmp;
+
+	// note window position and size
+	Rect rect;
+	unsigned int coord;
+	stmp.str(nwehd);
+	GET_INT(stmp, coord)
+	rect.left = coord;
+	GET_INT(stmp, coord)
+	rect.top = coord;
+	GET_INT(stmp, coord)
+	rect.right = coord;
+	GET_INT(stmp, coord)
+	rect.bottom = coord;
+
+	string name = nwelb.c_str();
+
+	// ResultsLog note window has left, top, right, bottom all zero.
+	// All other parameters are also zero, except "name" and "text".
+	if (!rect.bottom || !rect.right) {
+		resultsLog = nwect.c_str();
+		return;
+	}
+	unsigned char state = nwehd[0x18];
+
+	double creationDate, modificationDate;
+	stmp.str(nwehd.substr(0x20));
+	GET_DOUBLE(stmp, creationDate)
+	GET_DOUBLE(stmp, modificationDate)
+
+	unsigned char c = nwehd[0x38];
+
+	unsigned int labellen = 0;
+	stmp.str(nwehd.substr(0x3C));
+	GET_INT(stmp, labellen)
+
+	notes.push_back(Note(name));
+	notes.back().objectID = objectIndex;
+	++objectIndex;
+
+	notes.back().frameRect = rect;
+	notes.back().creationDate = doubleToPosixTime(creationDate);
+	notes.back().modificationDate = doubleToPosixTime(modificationDate);
+
+	if (c == 0x01)
+		notes.back().title = Window::Label;
+	else if (c == 0x02)
+		notes.back().title = Window::Name;
+	else
+		notes.back().title = Window::Both;
+
+	if (state == 0x07)
+		notes.back().state = Window::Minimized;
+	else if (state == 0x0b)
+		notes.back().state = Window::Maximized;
+
+	notes.back().hidden = (state & 0x40);
+
+	if (labellen > 1) {
+		notes.back().label = nwect.substr(0,labellen);
+		notes.back().text = nwect.substr(labellen).c_str();
+	} else {
+		notes.back().text = nwect.c_str();
 	}
 }
