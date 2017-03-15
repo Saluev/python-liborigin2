@@ -591,6 +591,9 @@ bool OriginAnyParser::readAxisBreakElement() {
 	// go to end of axis break data
 	file.seekg(abd_start+abe_data_size+1, ios_base::beg);
 
+	// get axis break info
+	getAxisBreakProperties(abd_data, abe_data_size);
+
 	return true;
 }
 
@@ -2312,6 +2315,50 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 
 		h = cvehd[0x143];
 		curve.connectSymbols = (h&0x8);
+
+	}
+}
+
+void OriginAnyParser::getAxisBreakProperties(string abdata, unsigned int abdatasz) {
+	istringstream stmp;
+
+	if (ispread != -1) { // spreadsheet
+
+	} else if (imatrix != -1) { // matrix
+
+
+	} else if (iexcel != -1) { // excel
+
+
+	} else { // graph
+
+		GraphLayer& glayer = graphs[igraph].layers[ilayer];
+		unsigned char h = abdata[0x02];
+		if (h == 2) {
+			glayer.xAxisBreak.minorTicksBefore = glayer.xAxis.minorTicks;
+			glayer.xAxisBreak.scaleIncrementBefore = glayer.xAxis.step;
+			glayer.xAxisBreak.show = true;
+			stmp.str(abdata.substr(0x0B));
+			GET_DOUBLE(stmp, glayer.xAxisBreak.from)
+			GET_DOUBLE(stmp, glayer.xAxisBreak.to)
+			GET_DOUBLE(stmp, glayer.xAxisBreak.scaleIncrementAfter)
+			GET_DOUBLE(stmp, glayer.xAxisBreak.position)
+			h = abdata[0x2B];
+			glayer.xAxisBreak.log10 = (h == 1);
+			glayer.xAxisBreak.minorTicksAfter = abdata[0x2C];
+		} else if (h == 4) {
+			glayer.yAxisBreak.minorTicksBefore = glayer.yAxis.minorTicks;
+			glayer.yAxisBreak.scaleIncrementBefore = glayer.yAxis.step;
+			glayer.yAxisBreak.show = true;
+			stmp.str(abdata.substr(0x0B));
+			GET_DOUBLE(stmp, glayer.yAxisBreak.from)
+			GET_DOUBLE(stmp, glayer.yAxisBreak.to)
+			GET_DOUBLE(stmp, glayer.yAxisBreak.scaleIncrementAfter)
+			GET_DOUBLE(stmp, glayer.yAxisBreak.position)
+			h = abdata[0x2B];
+			glayer.yAxisBreak.log10 = (h == 1);
+			glayer.yAxisBreak.minorTicksAfter = abdata[0x2C];
+		}
 
 	}
 }
