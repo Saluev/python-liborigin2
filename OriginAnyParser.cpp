@@ -2278,8 +2278,6 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 				curve.text.fontItalic = (h & 0x2);
 				curve.text.fontBold = (h & 0x8);
 				curve.text.whiteOut = (h & 0x20);
-
-						file.seekg(2, ios_base::cur);
 				curve.text.color = getColor(cvehd.substr(0x86,4));
 			}
 			// TODO: replace d_colormap_offset by appropiate hex value
