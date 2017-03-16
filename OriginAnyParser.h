@@ -51,8 +51,8 @@ protected:
 	bool readParameterElement();
 	bool readNoteElement();
 	void readProjectTree();
-	unsigned int readFolderTree(unsigned int);
-	void readProjectLeaf();
+	unsigned int readFolderTree(tree<ProjectNode>::iterator, unsigned int);
+	void readProjectLeaf(tree<ProjectNode>::iterator);
 	void readAttachmentList();
 	bool getColumnInfoAndData(string, unsigned int, string, unsigned int);
 	void getMatrixValues(string, unsigned int, short, char, char, int);
@@ -65,6 +65,9 @@ protected:
 	void getAxisParameterProperties(string, unsigned int, int);
 	void getNoteProperties(string, unsigned int, string, unsigned int, string, unsigned int);
 	void getColorMap(ColorMap&, string, unsigned int);
+	void getProjectLeafProperties(tree<ProjectNode>::iterator, string, unsigned int);
+	void getProjectFolderProperties(tree<ProjectNode>::iterator, string, unsigned int);
+	void outputProjectTree();
 
 	inline time_t doubleToPosixTime(double jdt)
 	{

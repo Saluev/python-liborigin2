@@ -116,6 +116,8 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data) {
 	unsigned int note_list_size = 0;
 
 	LOG_PRINT(logfile, "Reading Note windows ...\n")
+	// Note windows have an independent index
+	objectIndex = 0;
 	while (true) {
 		if (!readNoteElement()) break;
 		note_list_size++;
@@ -703,15 +705,18 @@ void OriginAnyParser::readProjectTree() {
 	string pte_pre2 = readObjectAsString(pte_pre2_size);
 
 	// root element and children
-	unsigned int rootfolder = readFolderTree(pte_depth);
+	unsigned int rootfolder = readFolderTree(projectTree.begin(), pte_depth);
 
 	// epilogue (should be zero)
 	unsigned int pte_post_size = readObjectSize();
 
+	// log info on project tree
+	outputProjectTree();
+
 	return;
 }
 
-unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
+unsigned int OriginAnyParser::readFolderTree(tree<ProjectNode>::iterator parent, unsigned int depth) {
 	unsigned int fle_header_size = 0, fle_eofh_size = 0, fle_name_size = 0, fle_prop_size = 0;
 	unsigned long curpos = 0;
 
@@ -733,6 +738,10 @@ unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
 		string obj_data = readObjectAsString(obj_size);
 	}
 
+	// get project folder properties
+	tree<ProjectNode>::iterator current_folder = projectTree.append_child(parent, ProjectNode(fle_name, ProjectNode::Folder));
+	getProjectFolderProperties(current_folder, fle_header, fle_header_size);
+
 	// file entries
 	unsigned int number_of_files_size = 0;
 
@@ -748,7 +757,7 @@ unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
 	LOG_PRINT(logfile, "%d\n", number_of_files)
 
 	for (unsigned int i=0; i < number_of_files; i++) {
-		readProjectLeaf();
+		readProjectLeaf(current_folder);
 	}
 
 	// subfolder entries
@@ -766,14 +775,14 @@ unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
 
 	for (unsigned int i=0; i < number_of_folders; i++) {
 		depth++;
-		unsigned int subfolder = readFolderTree(depth);
+		unsigned int subfolder = readFolderTree(current_folder, depth);
 		depth--;
 	}
 
 	return number_of_files;
 }
 
-void OriginAnyParser::readProjectLeaf() {
+void OriginAnyParser::readProjectLeaf(tree<ProjectNode>::iterator current_folder) {
 	unsigned long curpos = 0;
 
 	// preamble size (usually 0) and data
@@ -784,18 +793,13 @@ void OriginAnyParser::readProjectLeaf() {
 	unsigned int ptl_data_size = readObjectSize();
 	curpos = file.tellg();
 	string ptl_data = readObjectAsString(ptl_data_size);
-
-	// get info from file data
-	istringstream stmp(ios_base::binary);
-	stmp.str(ptl_data);
-	unsigned int file_type = 0, file_object_id = 0;
-	GET_INT(stmp, file_type);
-	GET_INT(stmp, file_object_id);
-
-	LOG_PRINT(logfile, "File at %d [0x%X], type 0x%X, object_id %d\n", curpos, curpos, file_type, file_object_id)
+	LOG_PRINT(logfile, "File at %d [0x%X]\n", curpos, curpos)
 
 	// epilogue (should be zero)
 	unsigned int ptl_post_size = readObjectSize();
+
+	// get project node properties
+	getProjectLeafProperties(current_folder, ptl_data, ptl_data_size);
 
 	return;
 }
@@ -2694,4 +2698,50 @@ void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int 
 		cmap.levels.push_back(make_pair(value, level));
 	}
 
+}
+
+void OriginAnyParser::getProjectLeafProperties(tree<ProjectNode>::iterator current_folder, string ptldt, unsigned int ptldtsz) {
+	istringstream stmp;
+
+	stmp.str(ptldt);
+	unsigned int file_type = 0, file_object_id = 0;
+	GET_INT(stmp, file_type);
+	GET_INT(stmp, file_object_id);
+
+	if (file_type == 0x100000) { // Note window
+		if ((file_object_id <= notes.size()) && (notes.size()>0)) {
+			projectTree.append_child(current_folder, ProjectNode(notes[file_object_id].name, ProjectNode::Note));
+		}
+	} else { // other windows
+		pair<ProjectNode::NodeType, string> object = findObjectByIndex(file_object_id);
+		projectTree.append_child(current_folder, ProjectNode(object.second, object.first));
+	}
+}
+
+void OriginAnyParser::getProjectFolderProperties(tree<ProjectNode>::iterator current_folder, string flehd, unsigned int flehdsz) {
+	istringstream stmp;
+
+	unsigned char a = flehd[0x02];
+	(*current_folder).active = (a == 1);
+
+	double creationDate, modificationDate;
+	stmp.str(flehd.substr(0x10));
+	GET_DOUBLE(stmp, creationDate);
+	GET_DOUBLE(stmp, modificationDate);
+
+	(*current_folder).creationDate = doubleToPosixTime(creationDate);
+	(*current_folder).modificationDate = doubleToPosixTime(modificationDate);
+}
+
+void OriginAnyParser::outputProjectTree() {
+	unsigned int windowsCount = speadSheets.size()+matrixes.size()+excels.size()+graphs.size()+notes.size();
+
+	cout << "Project has " << windowsCount << " windows." << endl;
+	cout << "Origin project Tree" << endl;
+
+	char cdsz[21];
+	for (tree<ProjectNode>::iterator it = projectTree.begin(projectTree.begin()); it != projectTree.end(projectTree.begin()); ++it) {
+		strftime(cdsz, sizeof(cdsz), "%F %T", gmtime(&(*it).creationDate));
+		cout <<  string(projectTree.depth(it) - 1, ' ') <<  (*it).name.c_str() << "\t" << cdsz << endl;
+	}
 }
