@@ -1719,12 +1719,11 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 		else if (sec_name == "SPECTRUM1") {
 			glayer.isXYY3D = false;
 			glayer.colorScale.visible = true;
-			unsigned char h = andt1[0x18];
-			glayer.colorScale.reverseOrder = h;
-			stmp.str(andt1.substr(0x20));
+			glayer.colorScale.reverseOrder = andt2[0x18];
+			stmp.str(andt2.substr(0x20));
 			GET_SHORT(stmp, glayer.colorScale.colorBarThickness)
 			GET_SHORT(stmp, glayer.colorScale.labelGap)
-			glayer.colorScale.labelsColor = getColor(andt1.substr(0x5C,4));
+			glayer.colorScale.labelsColor = getColor(andt2.substr(0x5C,4));
 		}
 		else if (sec_name == "&0") {
 			glayer.isWaterfall = true;
