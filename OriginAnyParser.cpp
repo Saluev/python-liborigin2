@@ -744,7 +744,7 @@ unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
 	istringstream stmp(ios_base::binary);
 	stmp.str(fle_nfiles);
 	unsigned int number_of_files = 0;
-	stmp.read(reinterpret_cast<char *>(&number_of_files), number_of_files_size);
+	GET_INT(stmp, number_of_files)
 	LOG_PRINT(logfile, "%d\n", number_of_files)
 
 	for (unsigned int i=0; i < number_of_files; i++) {
@@ -761,7 +761,7 @@ unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
 
 	stmp.str(fle_nfolders);
 	unsigned int number_of_folders = 0;
-	stmp.read(reinterpret_cast<char *>(&number_of_folders), number_of_folders_size);
+	GET_INT(stmp, number_of_folders)
 	LOG_PRINT(logfile, "%d\n", number_of_folders)
 
 	for (unsigned int i=0; i < number_of_folders; i++) {
@@ -792,7 +792,7 @@ void OriginAnyParser::readProjectLeave() {
 	GET_INT(stmp, file_type);
 	GET_INT(stmp, file_object_id);
 
-	LOG_PRINT(logfile, "File at %d [0x%X], type %d, object_id %d\n", curpos, curpos, file_type, file_object_id)
+	LOG_PRINT(logfile, "File at %d [0x%X], type 0x%X, object_id %d\n", curpos, curpos, file_type, file_object_id)
 
 	// epilogue (should be zero)
 	unsigned int ptl_post_size = readObjectSize();
