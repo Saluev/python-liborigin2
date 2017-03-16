@@ -1422,6 +1422,7 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 		} else if (sec_name == "X1") {
 			stmp >> sheet.coordinates[3];
 		} else if (sec_name == "COLORMAP") {
+			cout << "COLORMAP annotation: parsing not implemented yet" << endl;
 			// TODO: implement getColorMap (no example available)
 			// sheet.colorMap = getColorMap(andt1, andt2, andt3)
 		}
