@@ -52,7 +52,7 @@ protected:
 	bool readNoteElement();
 	void readProjectTree();
 	unsigned int readFolderTree(unsigned int);
-	void readProjectLeave();
+	void readProjectLeaf();
 	void readAttachmentList();
 	bool getColumnInfoAndData(string, unsigned int, string, unsigned int);
 	void getMatrixValues(string, unsigned int, short, char, char, int);

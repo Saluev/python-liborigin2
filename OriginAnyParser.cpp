@@ -748,7 +748,7 @@ unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
 	LOG_PRINT(logfile, "%d\n", number_of_files)
 
 	for (unsigned int i=0; i < number_of_files; i++) {
-		readProjectLeave();
+		readProjectLeaf();
 	}
 
 	// subfolder entries
@@ -773,7 +773,7 @@ unsigned int OriginAnyParser::readFolderTree(unsigned int depth) {
 	return number_of_files;
 }
 
-void OriginAnyParser::readProjectLeave() {
+void OriginAnyParser::readProjectLeaf() {
 	unsigned long curpos = 0;
 
 	// preamble size (usually 0) and data
