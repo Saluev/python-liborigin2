@@ -1423,8 +1423,10 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 			stmp >> sheet.coordinates[3];
 		} else if (sec_name == "COLORMAP") {
 			cout << "COLORMAP annotation: parsing not implemented yet" << endl;
-			// TODO: implement getColorMap (no example available)
-			// sheet.colorMap = getColorMap(andt1, andt2, andt3)
+			// TODO: implement getColorMap
+			// still not clear how to handle it.
+			// Color maps for matrix annotations seem to differ from color maps for graph curves (3D).
+			// getColorMap(sheet.colorMap, andt2, andt2sz);
 		}
 
 	} else if (iexcel != -1) {
@@ -2277,12 +2279,10 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 				curve.text.fontItalic = (h & 0x2);
 				curve.text.fontBold = (h & 0x8);
 				curve.text.whiteOut = (h & 0x20);
+
 				curve.text.color = getColor(cvehd.substr(0x86,4));
 			}
-			// TODO: replace d_colormap_offset by appropiate hex value
-			// file.seekg(LAYER + d_colormap_offset, ios_base::beg);
-			// readColorMap(colorMap);
-			cout << "readColorMap and d_colormap_offset not implemented" << endl;
+			getColorMap(colorMap, cvedt, cvedtsz);
 		}
 
 		curve.fillAreaColor = getColor(cvehd.substr(0xC2,4));
@@ -2651,4 +2651,47 @@ void OriginAnyParser::getNoteProperties(string nwehd, unsigned int nwehdsz, stri
 	} else {
 		notes.back().text = nwect.c_str();
 	}
+}
+
+void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int cmapdatasz) {
+	istringstream stmp;
+
+	stmp.str(cmapdata.substr(0x6C));
+	unsigned int colorMapSize = 0;
+	GET_INT(stmp, colorMapSize)
+
+	unsigned int lvl_offset = 0;
+	for (unsigned int i = 0; i < colorMapSize + 3; ++i) {
+		lvl_offset = 0x180 + i*0x38;
+		ColorMapLevel level;
+
+		level.fillPattern = cmapdata[lvl_offset];
+		level.fillPatternColor = getColor(cmapdata.substr(lvl_offset+0x04, 4));
+
+		stmp.str(cmapdata.substr(lvl_offset+0x08));
+		unsigned short w;
+		GET_SHORT(stmp, w)
+		level.fillPatternLineWidth = (double)w/500.0;
+
+		level.lineStyle = cmapdata[lvl_offset+0x10];
+
+		stmp.str(cmapdata.substr(lvl_offset+0x12));
+		GET_SHORT(stmp, w)
+		level.lineWidth = (double)w/500.0;
+
+		level.lineColor = getColor(cmapdata.substr(lvl_offset+0x14, 4));
+
+		unsigned char h = cmapdata[lvl_offset+0x1A];
+		level.labelVisible = (h & 0x1);
+		level.lineVisible = !(h & 0x2);
+
+		level.fillColor = getColor(cmapdata.substr(lvl_offset+0x28, 4));
+
+		double value = 0.0;
+		stmp.str(cmapdata.substr(lvl_offset+0x30));
+		GET_DOUBLE(stmp, value)
+
+		cmap.levels.push_back(make_pair(value, level));
+	}
+
 }
