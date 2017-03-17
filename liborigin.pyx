@@ -87,7 +87,7 @@ cdef class SpreadColumn:
     
     cdef public string name, command, comment
     cdef public int type, valueType, numericDisplayType # enums
-    cdef public int valueTypeSpecification, significantDigits, decimalPlaces, width, index, sheet
+    cdef public int valueTypeSpecification, significantDigits, decimalPlaces, width, index, colIndex, sheet
     cdef public object data
     
     cdef void copy(self, const objects.SpreadColumn *col):
@@ -106,6 +106,7 @@ cdef class SpreadColumn:
         self.comment = col.comment
         self.width = col.width
         self.index = col.index
+        self.colIndex = col.colIndex
         self.sheet = col.sheet
         self.data = []
         # data copying is... umm... complicated.
@@ -124,7 +125,7 @@ cdef class SpreadColumn:
 cdef class SpreadSheet(Window):
     
     cdef public int maxRows, sheets
-    cdef public bool loose, multisheet
+    cdef public bool loose
     cdef public object columns
     
     cdef void copy(self, const objects.Window *wnd):
@@ -132,36 +133,43 @@ cdef class SpreadSheet(Window):
         cdef const objects.SpreadSheet *sht = <objects.SpreadSheet*>wnd
         self.maxRows = sht.maxRows
         self.loose = sht.loose
-        self.multisheet = sht.multisheet
         self.sheets = sht.sheets
         self.columns = [makeSpreadColumn(sht.columns[i]) for i in xrange(sht.columns.size())]
 
-cdef class Matrix(Window):
+cdef class MatrixSheet:
     
     cdef public int rowCount, columnCount, valueTypeSpecification, significantDigits, decimalPlaces
-    cdef public int numericDisplayType, view, header # enums
-    cdef public string command
+    cdef public int numericDisplayType, view # enums
+    cdef public string command, name
     cdef public int width, index, sheets
     cdef public object colorMap, data, coordinates
+
+    cdef void copy(self, const objects.MatrixSheet *mtxsh):
+        self.rowCount = mtxsh.rowCount
+        self.columnCount = mtxsh.columnCount
+        self.valueTypeSpecification = mtxsh.valueTypeSpecification
+        self.significantDigits = mtxsh.significantDigits
+        self.decimalPlaces = mtxsh.decimalPlaces
+        self.numericDisplayType = <int>mtxsh.numericDisplayType
+        self.command = mtxsh.command
+        self.name = mtxsh.name
+        self.width = mtxsh.width
+        self.index = mtxsh.index
+        self.view = <int>mtxsh.view
+        self.colorMap = makeColorMap(mtxsh.colorMap)
+        self.data = [mtxsh.data[i] for i in xrange(mtxsh.data.size())]
+        self.coordinates = [mtxsh.coordinates[i] for i in xrange(mtxsh.coordinates.size())]
+
+cdef class Matrix(Window):
     
+    cdef public int activeSheet
+
     cdef void copy(self, const objects.Window *wnd):
         Window.copy(self, wnd)
         cdef const objects.Matrix *mtx = <objects.Matrix*>wnd
-        self.rowCount = mtx.rowCount
-        self.columnCount = mtx.columnCount
-        self.valueTypeSpecification = mtx.valueTypeSpecification
-        self.significantDigits = mtx.significantDigits
-        self.decimalPlaces = mtx.decimalPlaces
-        self.numericDisplayType = <int>mtx.numericDisplayType
-        self.command = mtx.command
-        self.width = mtx.width
-        self.index = mtx.index
-        self.sheets = mtx.sheets
-        self.view = <int>mtx.view
         self.header = <int>mtx.header
-        self.colorMap = makeColorMap(mtx.colorMap)
-        self.data = [mtx.data[i] for i in xrange(mtx.data.size())]
-        self.coordinates = [mtx.coordinates[i] for i in xrange(mtx.coordinates.size())]
+        self.activeSheet = mtx.activeSheet
+        self.sheets = [makeMatrixSheet(mtx.sheets[i]) for i in xrange(mtx.sheets.size())]
 
 cdef class Function:
     
@@ -301,7 +309,7 @@ cdef class SurfaceProperties:
 cdef class PercentileProperties:
     
     cdef public int maxSymbolType, p99SymbolType, meanSymbolType, p1SymbolType, minSymbolType, \
-                    symbolSize, boxRange, whiskersRange
+                    symbolSize, boxRange, whiskersRange, labels
     cdef public object symbolColor, symbolFillColor # Color
     cdef public float boxCoeff, whiskersCoeff
     cdef public bool diamondBox
@@ -319,29 +327,36 @@ cdef class PercentileProperties:
         self.boxCoeff = arg.boxCoeff
         self.whiskersCoeff = arg.whiskersCoeff
         self.diamondBox = arg.diamondBox
+        self.labels = arg.labels
 
 
 cdef class GraphCurve:
     
-    cdef public int type, lineStyle, lineConnect, boxWidth, fillAreaType, fillAreaPattern, \
-                    fillAreaPatternBorderStyle, symbolType, symbolThickness, pointOffset
-    cdef public string dataName, xColumnName, yColumnName, zColumnName
+    cdef public int type, lineTransparency, lineStyle, lineConnect, boxWidth, fillAreaType, fillAreaPattern, \
+                    fillAreaTransparency, fillAreaPatternBorderStyle, symbolType, symbolFillTransparency, symbolThickness, pointOffset
+    cdef public string dataName, xDataName, xColumnName, yColumnName, zColumnName
     cdef public object lineColor, fillAreaColor, fillAreaPatternColor, fillAreaPatternBorderColor, \
                        symbolColor, symbolFillColor # Color
     cdef public object pie, vector, text, surface, colorMap
     cdef public float lineWidth, fillAreaPatternWidth, fillAreaPatternBorderWidth, symbolSize
-    cdef public bool fillArea, connectSymbols
+    cdef public bool hidden, fillArea, fillAreaWithLineTransparency, connectSymbols
     
     cdef void copy(self, const objects.GraphCurve *arg):
+        self.hidden = arg.hidden
         self.type = arg.type
         self.lineStyle = arg.lineStyle
+        self.lineTransparency = arg.lineTransparency
         self.lineConnect = arg.lineConnect
         self.boxWidth = arg.boxWidth
         self.fillAreaType = arg.fillAreaType
         self.fillAreaPattern = arg.fillAreaPattern
+        self.fillAreaTransparency = arg.fillAreaTransparency
+        self.fillAreaWithLineTransparency = arg.fillAreaWithLineTransparency
+        self.symbolFillTransparency = arg.symbolFillTransparency
         self.symbolThickness = arg.symbolThickness
         self.pointOffset = arg.pointOffset
         self.dataName = arg.dataName
+        self.xDataName = arg.xDataName
         self.xColumnName = arg.xColumnName
         self.yColumnName = arg.yColumnName
         self.zColumnName = arg.zColumnName
@@ -401,7 +416,7 @@ cdef class GraphAxisFormat:
     cdef public int color, majorTicksType, minorTicksType, axisPosition
     cdef public float thickness, majorTickLength, axisPositionValue
     cdef public object label # TextBox
-    cdef public string prefix, suffix
+    cdef public string prefix, suffix, factor
     
     cdef void copy(self, const objects.GraphAxisFormat *arg):
         self.hidden = arg.hidden
@@ -415,17 +430,18 @@ cdef class GraphAxisFormat:
         self.label = makeTextBox(arg.label)
         self.prefix = arg.prefix
         self.suffix = arg.suffix
+        self.factor = arg.factor
 
 
 cdef class GraphAxisTick:
     
-    cdef public bool hidden, fontBold
+    cdef public bool showMajorLabels, fontBold
     cdef public int color, valueTypeSpecification, decimalPlaces, fontSize, rotation
     cdef public int valueType # enum
     cdef public string dataName, columnName
     
     cdef void copy(self, const objects.GraphAxisTick *arg):
-        self.hidden = arg.hidden
+        self.showMajorLabels = arg.showMajorLabels
         self.fontBold = arg.fontBold
         self.color = arg.color
         self.valueTypeSpecification = arg.valueTypeSpecification
@@ -440,6 +456,7 @@ cdef class GraphAxisTick:
 cdef class GraphAxis:
     
     cdef public int position # enum
+    cdef public bool zeroLine, oppositeLine
     cdef public float min, max, step
     cdef public int majorTicks, minorTicks, scale
     cdef public object majorGrid, minorGrid # GraphGrid
@@ -448,6 +465,8 @@ cdef class GraphAxis:
     
     cdef void copy(self, const objects.GraphAxis *arg):
         self.position = <int>arg.position
+        self.zeroLine = arg.zeroLine
+        self.oppositeLine = arg.oppositeLine
         self.min = arg.min
         self.max = arg.max
         self.step = arg.step
@@ -533,11 +552,12 @@ cdef class Bitmap:
 
 cdef class ColorScale:
     
-    cdef public bool reverseOrder
+    cdef public bool visible, reverseOrder
     cdef public int labelGap, colorBarThickness
     cdef public object labelsColor # Color
     
     cdef void copy(self, const objects.ColorScale *arg):
+        self.visible = arg.visible
         self.reverseOrder = arg.reverseOrder
         self.labelGap = arg.labelGap
         self.colorBarThickness = arg.colorBarThickness
@@ -550,14 +570,15 @@ cdef class GraphLayer:
     cdef public object legend # TextBox
     cdef public object backgroundColor # Color
     cdef public int borderType # enum
+    cdef public int imageProfileTool, xOffset, yOffset
     cdef public object xAxis, yAxis, zAxis # GraphAxis
     cdef public object xAxisBreak, yAxisBreak, zAxisBreak # GraphAxisBreak
-    cdef public float histogramBin, histogramBegin, histogramEnd, \
+    cdef public float histogramBin, histogramBegin, histogramEnd, xAngle, yAngle, zAngle,\
                        xLength, yLength, zLength, vLine, hLine
     cdef public object percentile # PercentileProperties
     cdef public object colorScale # ColorScale
     cdef public object texts, pieTexts, lines, figures, bitmaps, curves
-    cdef public bool imageProfileTool, isXYY3D
+    cdef public bool isWaterfall, gridOnTop, exchangedAxes, isXYY3D, orthographic3D
     
     cdef void copy(self, const objects.GraphLayer *arg):
         self.clientRect = makeRect(arg.clientRect)
@@ -583,8 +604,20 @@ cdef class GraphLayer:
         self.figures  = [makeFigure    (arg.figures[i] ) for i in xrange(arg.figures.size() )]
         self.bitmaps  = [makeBitmap    (arg.bitmaps[i] ) for i in xrange(arg.bitmaps.size() )]
         self.curves   = [makeGraphCurve(arg.curves[i]  ) for i in xrange(arg.curves.size()  )]
+        self.xAngle = arg.xAngle
+        self.yAngle = arg.yAngle
+        self.zAngle = arg.zAngle
+        self.xLength = arg.xLength
+        self.yLength = arg.yLength
+        self.zLength = arg.zLength
         self.imageProfileTool = arg.imageProfileTool
+        self.isWaterfall = arg.isWaterfall
+        self.xOffset = arg.xOffset
+        self.yOffset = arg.yOffset
+        self.gridOnTop = arg.gridOnTop
+        self.exchangedAxes = arg.exchangedAxes
         self.isXYY3D = arg.isXYY3D
+        self.orthographic3D = arg.orthographic3D
 
 
 cdef class GraphLayerRange:
@@ -600,7 +633,8 @@ cdef class Graph(Window):
     
     cdef public object layers
     cdef public int width, height
-    cdef public bool is3D, isLayout
+    cdef public bool is3D, isLayout, connectMissingData
+    cdef public string templateName
    
     cdef void copy(self, const objects.Window *wnd):
         Window.copy(self, wnd)
@@ -610,6 +644,8 @@ cdef class Graph(Window):
         self.height = grph.height
         self.is3D = grph.is3D
         self.isLayout = grph.isLayout
+        self.connectMissingData = grph.connectMissingData
+        self.templateName = grph.templateName
 
 cdef class Note(Window):
     
@@ -625,12 +661,14 @@ cdef class ProjectNode:
     cdef public int type # enum
     cdef public string name
     cdef public int creationDate, modificationDate
+    cdef public bool active
     
     cdef void copy(self, const objects.ProjectNode *pn):
         self.type = <int>pn.type
         self.name = pn.name
         self.creationDate = pn.creationDate
         self.modificationDate = pn.modificationDate
+        self.active = pn.active
 
 ####################################################################################################
 ##########################################              ############################################
@@ -685,6 +723,11 @@ cdef makeSpreadSheet(const objects.SpreadSheet &sht):
     print "Loading book #%d(%s/%s) (%d sheets, %d columns)" % (result.objectID, result.name, result.label.replace(b"\n", b""), result.sheets, len(result.columns))
     return result
 
+cdef makeMatrixSheet(const objects.MatrixSheet &mtxsh):
+    result = MatrixSheet()
+    result.copy(&mtxsh)
+    return result
+
 cdef makeMatrix(const objects.Matrix &mtx):
     result = Matrix()
     result.copy(&mtx)
@@ -694,7 +737,7 @@ cdef makeMatrix(const objects.Matrix &mtx):
 cdef makeFunction(const objects.Function &f):
     result = Function()
     result.copy(&f)
-    print "Loading function #%d(%d)" % (result.index, result.name)
+    print "Loading function #%d(%s)" % (result.index, result.name)
     return result
 
 cdef makeTextBox(const objects.TextBox &arg):
