@@ -56,8 +56,10 @@ OriginFile::OriginFile(const string& fileName)
 	getline(file, vers);
 	unsigned int majorVersion = strtol(vers.substr(5,1).c_str(),0,10);
 	char locale_decpoint = vers[6];
+	(void) locale_decpoint; // supress compiler warning
 	unsigned int buildVersion = strtol(vers.substr(7).c_str(),0,10);
 	unsigned int buildNumber = strtol(vers.substr(12).c_str(),0,10);
+	(void) buildNumber; // supress compiler warning
 	file.close();
 	LOG_PRINT(logfile, "File: %s\n", fileName.c_str())
 
