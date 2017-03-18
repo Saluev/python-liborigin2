@@ -2675,6 +2675,13 @@ void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int 
 	stmp.str(cmapdata.substr(0x6C));
 	unsigned int colorMapSize = 0;
 	GET_INT(stmp, colorMapSize)
+	// check we have enough data to fill the map
+	unsigned int minDataSize = 0x180+(colorMapSize+2)*0x38;
+	if (minDataSize > cmapdatasz) {
+		cout << "WARNING: Too few data when getting ColorMap. Needed: at least " << minDataSize << " bytes. Have: " << cmapdatasz << " bytes." << endl;
+		LOG_PRINT(logfile, "WARNING: Too few data when getting ColorMap. Needed: at least %d bytes. Have: %d bytes.\n", minDataSize, cmapdatasz)
+		return;
+	}
 
 	unsigned int lvl_offset = 0;
 	for (unsigned int i = 0; i < colorMapSize + 3; ++i) {
