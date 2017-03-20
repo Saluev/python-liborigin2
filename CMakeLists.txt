@@ -18,13 +18,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set (sources
 	OriginFile.cpp
 	OriginParser.cpp
-	OriginDefaultParser.cpp
-	Origin600Parser.cpp
-	Origin610Parser.cpp
-	Origin700Parser.cpp
-	Origin750Parser.cpp
-	Origin800Parser.cpp
-	Origin810Parser.cpp
 	OriginAnyParser.cpp
 	)
 
