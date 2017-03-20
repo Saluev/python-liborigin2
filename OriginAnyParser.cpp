@@ -1494,22 +1494,32 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 		if (ankind == 0x22) {//Line/Arrow
 			if (attach == Origin::Scale) {
 				if (type == 2) {
-					stmp.str(andt1.substr(0x20));
-					GET_DOUBLE(stmp, begin.x)
-					GET_DOUBLE(stmp, end.x)
-					stmp.str(andt1.substr(0x40));
-					GET_DOUBLE(stmp, begin.y)
-					GET_DOUBLE(stmp, end.y)
+					try {
+						stmp.str(andt1.substr(0x20));
+						GET_DOUBLE(stmp, begin.x)
+						GET_DOUBLE(stmp, end.x)
+						stmp.str(andt1.substr(0x40));
+						GET_DOUBLE(stmp, begin.y)
+						GET_DOUBLE(stmp, end.y)
+					} catch (const std::out_of_range& oor) {
+						cerr << "WARNING while getting line/arrow properties: Out of range error: " <<  oor.what() << endl;
+						LOG_PRINT(logfile, "WARNING: Too few data when getting Line/Arrow properties.\n")
+					}
 				} else if (type == 4) {//curved arrow: start point, 2 middle points and end point
-					stmp.str(andt1.substr(0x20));
-					GET_DOUBLE(stmp, begin.x)
-					GET_DOUBLE(stmp, end.x)
-					GET_DOUBLE(stmp, end.x)
-					GET_DOUBLE(stmp, end.x)
-					GET_DOUBLE(stmp, begin.y)
-					GET_DOUBLE(stmp, end.y)
-					GET_DOUBLE(stmp, end.y)
-					GET_DOUBLE(stmp, end.y)
+					try {
+						stmp.str(andt1.substr(0x20));
+						GET_DOUBLE(stmp, begin.x)
+						GET_DOUBLE(stmp, end.x)
+						GET_DOUBLE(stmp, end.x)
+						GET_DOUBLE(stmp, end.x)
+						GET_DOUBLE(stmp, begin.y)
+						GET_DOUBLE(stmp, end.y)
+						GET_DOUBLE(stmp, end.y)
+						GET_DOUBLE(stmp, end.y)
+					}  catch (const out_of_range& oor) {
+						cerr << "WARNING while getting line/arrow properties: Out of range error: " <<  oor.what() << endl;
+						LOG_PRINT(logfile, "WARNING: Too few data when getting Line/Arrow properties.\n")
+					}
 				}
 			} else {
 				short x1, x2, y1, y2;
@@ -1585,9 +1595,11 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 
 		//line properties
 		unsigned char lineStyle = andt1[0x12];
-		unsigned short w1;
-		stmp.str(andt1.substr(0x13));
-		GET_SHORT(stmp, w1)
+		unsigned short w1 = 0;
+		if (andt1sz > 0x14) {
+			stmp.str(andt1.substr(0x13));
+			GET_SHORT(stmp, w1)
+		}
 		double width = (double)w1/500.0;
 
 		Figure figure;
@@ -2086,14 +2098,19 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 			}
 		}
 
-		stmp.str(cvehd.substr(0x4D));
-		GET_SHORT(stmp, w)
-		column = findDataByIndex(w-1);
-		if (column.first.size() > 0 && (glayer.is3D() || (curve.type == GraphCurve::XYZContour))) {
-			curve.xColumnName = column.second;
-			if (curve.dataName != column.first) {
-				// graph X and Y from different tables
+		if (cvehdsz > 0x4E) {
+			stmp.str(cvehd.substr(0x4D));
+			GET_SHORT(stmp, w)
+			column = findDataByIndex(w-1);
+			if (column.first.size() > 0 && (glayer.is3D() || (curve.type == GraphCurve::XYZContour))) {
+				curve.xColumnName = column.second;
+				if (curve.dataName != column.first) {
+					// graph X and Y from different tables
+				}
 			}
+		} else {
+			cerr << "WARNING while getting curve xColumn name: Too few data." << endl;
+			LOG_PRINT(logfile, "WARNING while getting curve xColumn name: Too few data.\n")
 		}
 
 		if (glayer.is3D() || glayer.isXYY3D) graphs[igraph].is3D = true;
@@ -2301,41 +2318,45 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 			getColorMap(colorMap, cvedt, cvedtsz);
 		}
 
-		curve.fillAreaColor = getColor(cvehd.substr(0xC2,4));
-		stmp.str(cvehd.substr(0xC6));
-		GET_SHORT(stmp, w)
-		curve.fillAreaPatternWidth = (double)w/500.0;
+		try {
+			curve.fillAreaColor = getColor(cvehd.substr(0xC2,4));
+			stmp.str(cvehd.substr(0xC6));
+			GET_SHORT(stmp, w)
+			curve.fillAreaPatternWidth = (double)w/500.0;
 
-		curve.fillAreaPatternColor = getColor(cvehd.substr(0xCA,4));
-		curve.fillAreaPattern = cvehd[0xCE];
-		curve.fillAreaPatternBorderStyle = cvehd[0xCF];
-		stmp.str(cvehd.substr(0xD0));
-		GET_SHORT(stmp, w)
-		curve.fillAreaPatternBorderWidth = (double)w/500.0;
-		curve.fillAreaPatternBorderColor = getColor(cvehd.substr(0xD2,4));
+			curve.fillAreaPatternColor = getColor(cvehd.substr(0xCA,4));
+			curve.fillAreaPattern = cvehd[0xCE];
+			curve.fillAreaPatternBorderStyle = cvehd[0xCF];
+			stmp.str(cvehd.substr(0xD0));
+			GET_SHORT(stmp, w)
+			curve.fillAreaPatternBorderWidth = (double)w/500.0;
+			curve.fillAreaPatternBorderColor = getColor(cvehd.substr(0xD2,4));
 
-		curve.fillAreaTransparency = cvehd[0x11E];
+			curve.fillAreaTransparency = cvehd[0x11E];
 
-		curve.lineColor = getColor(cvehd.substr(0x16A,4));
+			curve.lineColor = getColor(cvehd.substr(0x16A,4));
 
-		if (curve.type != GraphCurve::Contour) curve.text.color = curve.lineColor;
+			if (curve.type != GraphCurve::Contour) curve.text.color = curve.lineColor;
 
-		stmp.str(cvehd.substr(0x17));
-		GET_SHORT(stmp, curve.symbolType)
+			stmp.str(cvehd.substr(0x17));
+			GET_SHORT(stmp, curve.symbolType)
 
-		curve.symbolFillColor = getColor(cvehd.substr(0x12E,4));
-		curve.symbolColor = getColor(cvehd.substr(0x132,4));
-		curve.vector.color = curve.symbolColor;
+			curve.symbolFillColor = getColor(cvehd.substr(0x12E,4));
+			curve.symbolColor = getColor(cvehd.substr(0x132,4));
+			curve.vector.color = curve.symbolColor;
 
-		h = cvehd[0x136];
-		curve.symbolThickness = (h == 255 ? 1 : h);
-		curve.pointOffset = cvehd[0x137];
-		h = cvehd[0x138];
-		curve.symbolFillTransparency = cvehd[0x139];
+			h = cvehd[0x136];
+			curve.symbolThickness = (h == 255 ? 1 : h);
+			curve.pointOffset = cvehd[0x137];
+			h = cvehd[0x138];
+			curve.symbolFillTransparency = cvehd[0x139];
 
-		h = cvehd[0x143];
-		curve.connectSymbols = (h&0x8);
-
+			h = cvehd[0x143];
+			curve.connectSymbols = (h&0x8);
+		} catch (const std::out_of_range& oor) {
+			cerr << "WARNING while getting curve properties. Out of range error: " <<  oor.what() << endl;
+			LOG_PRINT(logfile, "WARNING while getting curve properties. Out of range error: %s\n", oor.what())
+		}
 	}
 }
 
@@ -2678,8 +2699,8 @@ void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int 
 	// check we have enough data to fill the map
 	unsigned int minDataSize = 0x180+(colorMapSize+2)*0x38;
 	if (minDataSize > cmapdatasz) {
-		cout << "WARNING: Too few data when getting ColorMap. Needed: at least " << minDataSize << " bytes. Have: " << cmapdatasz << " bytes." << endl;
-		LOG_PRINT(logfile, "WARNING: Too few data when getting ColorMap. Needed: at least %d bytes. Have: %d bytes.\n", minDataSize, cmapdatasz)
+		cerr << "WARNING: Too few data while getting ColorMap. Needed: at least " << minDataSize << " bytes. Have: " << cmapdatasz << " bytes." << endl;
+		LOG_PRINT(logfile, "WARNING: Too few data while getting ColorMap. Needed: at least %d bytes. Have: %d bytes.\n", minDataSize, cmapdatasz)
 		return;
 	}
 
