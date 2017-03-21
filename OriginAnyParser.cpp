@@ -2220,32 +2220,52 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 		}
 		//pie
 		if (curve.type == GraphCurve::Pie) {
-			h = cvehd[0x92];
+			// code from Origin410/500Parser
+			h = cvehd[0x14];
+			curve.pie.formatPercentages = (h & 0x08);
+			curve.pie.formatValues = !curve.pie.formatPercentages;
+			curve.pie.positionAssociate = (h & 0x80);
+			curve.pie.formatCategories  = (h & 0x20);
 
-			curve.pie.formatPercentages = (h & 0x01);
-			curve.pie.formatValues		= (h & 0x02);
-			curve.pie.positionAssociate = (h & 0x08);
-			curve.pie.clockwiseRotation = (h & 0x20);
-			curve.pie.formatCategories	= (h & 0x80);
+			h = cvehd[0x19];
+			curve.pie.radius = 100 - h;
 
-			curve.pie.formatAutomatic = cvehd[0x93];
-			stmp.str(cvehd.substr(0x94));
-			GET_SHORT(stmp, curve.pie.distance)
-			curve.pie.viewAngle = cvehd[0x96];
-			curve.pie.thickness = cvehd[0x98];
+			h = cvehd[0x1A];
+			curve.pie.distance = h;
+			curve.pie.formatAutomatic = true;
+			curve.pie.viewAngle = 90;
+			curve.pie.thickness = 33;
+			curve.pie.rotation = 0;
+			curve.pie.horizontalOffset = 0;
 
-			stmp.str(cvehd.substr(0x9A));
-			GET_SHORT(stmp, curve.pie.rotation)
+			if (cvehdsz > 0xA9) { // code from Origin750Parser.cpp
 
-			stmp.str(cvehd.substr(0x9E));
-			GET_SHORT(stmp, curve.pie.displacement)
+				h = cvehd[0x92];
+				curve.pie.formatPercentages = (h & 0x01);
+				curve.pie.formatValues		= (h & 0x02);
+				curve.pie.positionAssociate = (h & 0x08);
+				curve.pie.clockwiseRotation = (h & 0x20);
+				curve.pie.formatCategories	= (h & 0x80);
 
-			stmp.str(cvehd.substr(0xA0));
-			GET_SHORT(stmp, curve.pie.radius)
-			GET_SHORT(stmp, curve.pie.horizontalOffset)
+				curve.pie.formatAutomatic = cvehd[0x93];
+				stmp.str(cvehd.substr(0x94));
+				GET_SHORT(stmp, curve.pie.distance)
+				curve.pie.viewAngle = cvehd[0x96];
+				curve.pie.thickness = cvehd[0x98];
 
-			stmp.str(cvehd.substr(0xA6));
-			GET_INT(stmp, curve.pie.displacedSectionCount)
+				stmp.str(cvehd.substr(0x9A));
+				GET_SHORT(stmp, curve.pie.rotation)
+
+				stmp.str(cvehd.substr(0x9E));
+				GET_SHORT(stmp, curve.pie.displacement)
+
+				stmp.str(cvehd.substr(0xA0));
+				GET_SHORT(stmp, curve.pie.radius)
+				GET_SHORT(stmp, curve.pie.horizontalOffset)
+
+				stmp.str(cvehd.substr(0xA6));
+				GET_INT(stmp, curve.pie.displacedSectionCount)
+			}
 		}
 		//surface
 		if (glayer.isXYY3D || curve.type == GraphCurve::Mesh3D) {
@@ -2263,39 +2283,41 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 			curve.surface.sideWallEnabled = (h & 0x10);
 			curve.surface.frontColor = getColor(cvehd.substr(0x1D,4));
 
-			stmp.str(cvehd.substr(0x14C));
-			GET_SHORT(stmp, w)
-			curve.surface.gridLineWidth = (double)w/500.0;
-
-			curve.surface.gridColor = getColor(cvehd.substr(0x14E,4));
-
 			h = cvehd[0x13];
 			curve.surface.backColorEnabled = (h & 0x08);
-
-			curve.surface.backColor = getColor(cvehd.substr(0x15A,4));
-			curve.surface.xSideWallColor = getColor(cvehd.substr(0x15E,4));
-			curve.surface.ySideWallColor = getColor(cvehd.substr(0x162,4));
-
 			curve.surface.surface.fill = (h & 0x10);
 			curve.surface.surface.contour = (h & 0x40);
-			stmp.str(cvehd.substr(0x94));
-			GET_SHORT(stmp, w)
-			curve.surface.surface.lineWidth = (double)w/500.0;
-			curve.surface.surface.lineColor = getColor(cvehd.substr(0x96,4));
-
 			curve.surface.topContour.fill = (h & 0x02);
 			curve.surface.topContour.contour = (h & 0x04);
-			stmp.str(cvehd.substr(0xB4));
-			GET_SHORT(stmp, w)
-			curve.surface.topContour.lineWidth = (double)w/500.0;
-			curve.surface.topContour.lineColor = getColor(cvehd.substr(0xB6,4));
-
 			curve.surface.bottomContour.fill = (h & 0x80);
 			curve.surface.bottomContour.contour = (h & 0x01);
-			stmp.str(cvehd.substr(0xA4));
-			GET_SHORT(stmp, w)
-			curve.surface.bottomContour.lineWidth = (double)w/500.0;
-			curve.surface.bottomContour.lineColor = getColor(cvehd.substr(0xA6,4));
+
+			if (cvehdsz > 0x165) {
+				stmp.str(cvehd.substr(0x14C));
+				GET_SHORT(stmp, w)
+				curve.surface.gridLineWidth = (double)w/500.0;
+				curve.surface.gridColor = getColor(cvehd.substr(0x14E,4));
+				curve.surface.backColor = getColor(cvehd.substr(0x15A,4));
+				curve.surface.xSideWallColor = getColor(cvehd.substr(0x15E,4));
+				curve.surface.ySideWallColor = getColor(cvehd.substr(0x162,4));
+			}
+			if (cvehdsz > 0xA9) {
+				stmp.str(cvehd.substr(0x94));
+				GET_SHORT(stmp, w)
+				curve.surface.surface.lineWidth = (double)w/500.0;
+				curve.surface.surface.lineColor = getColor(cvehd.substr(0x96,4));
+
+				stmp.str(cvehd.substr(0xB4));
+				GET_SHORT(stmp, w)
+				curve.surface.topContour.lineWidth = (double)w/500.0;
+				curve.surface.topContour.lineColor = getColor(cvehd.substr(0xB6,4));
+
+				stmp.str(cvehd.substr(0xA4));
+				GET_SHORT(stmp, w)
+				curve.surface.bottomContour.lineWidth = (double)w/500.0;
+				curve.surface.bottomContour.lineColor = getColor(cvehd.substr(0xA6,4));
+			}
+
 		}
 		if (curve.type == GraphCurve::Mesh3D || curve.type == GraphCurve::Contour || curve.type == GraphCurve::XYZContour) {
 			if (curve.type == GraphCurve::Contour || curve.type == GraphCurve::XYZContour) glayer.isXYY3D = false;
