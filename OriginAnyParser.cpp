@@ -2337,7 +2337,9 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 
 				curve.text.color = getColor(cvehd.substr(0x86,4));
 			}
-			getColorMap(colorMap, cvedt, cvedtsz);
+			if (cvedtsz > 0x6C) {
+				getColorMap(colorMap, cvedt, cvedtsz);
+			}
 		}
 
 		try {
@@ -2524,9 +2526,11 @@ void OriginAnyParser::getAxisParameterProperties(string apdata, unsigned int apd
 			h = apdata[0x26];
 			axis.formatAxis[0].hidden = (h == 0);
 			axis.formatAxis[0].color = apdata[0x0F];
-			stmp.str(apdata.substr(0x4A));
-			GET_SHORT(stmp, w)
-			axis.formatAxis[0].majorTickLength = (double)w/10.0;
+			if (apdatasz > 0x4B) {
+				stmp.str(apdata.substr(0x4A));
+				GET_SHORT(stmp, w)
+				axis.formatAxis[0].majorTickLength = (double)w/10.0;
+			}
 			stmp.str(apdata.substr(0x15));
 			GET_SHORT(stmp, w)
 			axis.formatAxis[0].thickness = (double)w/500.0;
@@ -2609,9 +2613,11 @@ void OriginAnyParser::getAxisParameterProperties(string apdata, unsigned int apd
 			h = apdata[0x26];
 			axis.formatAxis[1].hidden = (h == 0);
 			axis.formatAxis[1].color = apdata[0x0F];
-			stmp.str(apdata.substr(0x4A));
-			GET_SHORT(stmp, w)
-			axis.formatAxis[1].majorTickLength = (double)w/10.0;
+			if (apdatasz > 0x4B) {
+				stmp.str(apdata.substr(0x4A));
+				GET_SHORT(stmp, w)
+				axis.formatAxis[1].majorTickLength = (double)w/10.0;
+			}
 			stmp.str(apdata.substr(0x15));
 			GET_SHORT(stmp, w)
 			axis.formatAxis[1].thickness = (double)w/500.0;
