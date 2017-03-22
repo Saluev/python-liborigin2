@@ -1490,34 +1490,24 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 		 */
 		unsigned char ankind = anhd[0x02];
 		if (ankind == 0x22) {//Line/Arrow
-			if (attach == Origin::Scale) {
+			if ((attach == Origin::Scale) && (andt1sz > 0x5F)) {
 				if (type == 2) {
-					try {
-						stmp.str(andt1.substr(0x20));
-						GET_DOUBLE(stmp, begin.x)
-						GET_DOUBLE(stmp, end.x)
-						stmp.str(andt1.substr(0x40));
-						GET_DOUBLE(stmp, begin.y)
-						GET_DOUBLE(stmp, end.y)
-					} catch (const std::out_of_range& oor) {
-						cerr << "WARNING while getting line/arrow properties: Out of range error: " <<  oor.what() << endl;
-						LOG_PRINT(logfile, "WARNING: Too few data when getting Line/Arrow properties.\n")
-					}
+					stmp.str(andt1.substr(0x20));
+					GET_DOUBLE(stmp, begin.x)
+					GET_DOUBLE(stmp, end.x)
+					stmp.str(andt1.substr(0x40));
+					GET_DOUBLE(stmp, begin.y)
+					GET_DOUBLE(stmp, end.y)
 				} else if (type == 4) {//curved arrow: start point, 2 middle points and end point
-					try {
-						stmp.str(andt1.substr(0x20));
-						GET_DOUBLE(stmp, begin.x)
-						GET_DOUBLE(stmp, end.x)
-						GET_DOUBLE(stmp, end.x)
-						GET_DOUBLE(stmp, end.x)
-						GET_DOUBLE(stmp, begin.y)
-						GET_DOUBLE(stmp, end.y)
-						GET_DOUBLE(stmp, end.y)
-						GET_DOUBLE(stmp, end.y)
-					}  catch (const out_of_range& oor) {
-						cerr << "WARNING while getting line/arrow properties: Out of range error: " <<  oor.what() << endl;
-						LOG_PRINT(logfile, "WARNING: Too few data when getting Line/Arrow properties.\n")
-					}
+					stmp.str(andt1.substr(0x20));
+					GET_DOUBLE(stmp, begin.x)
+					GET_DOUBLE(stmp, end.x)
+					GET_DOUBLE(stmp, end.x)
+					GET_DOUBLE(stmp, end.x)
+					GET_DOUBLE(stmp, begin.y)
+					GET_DOUBLE(stmp, end.y)
+					GET_DOUBLE(stmp, end.y)
+					GET_DOUBLE(stmp, end.y)
 				}
 			} else {
 				short x1, x2, y1, y2;
@@ -2106,9 +2096,6 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 					// graph X and Y from different tables
 				}
 			}
-		} else {
-			cerr << "WARNING while getting curve xColumn name: Too few data." << endl;
-			LOG_PRINT(logfile, "WARNING while getting curve xColumn name: Too few data.\n")
 		}
 
 		if (glayer.is3D() || glayer.isXYY3D) graphs[igraph].is3D = true;
@@ -2340,7 +2327,10 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 			}
 		}
 
-		try {
+		stmp.str(cvehd.substr(0x17));
+		GET_SHORT(stmp, curve.symbolType)
+
+		if (cvehdsz > 0x143) {
 			curve.fillAreaColor = getColor(cvehd.substr(0xC2,4));
 			stmp.str(cvehd.substr(0xC6));
 			GET_SHORT(stmp, w)
@@ -2360,9 +2350,6 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 
 			if (curve.type != GraphCurve::Contour) curve.text.color = curve.lineColor;
 
-			stmp.str(cvehd.substr(0x17));
-			GET_SHORT(stmp, curve.symbolType)
-
 			curve.symbolFillColor = getColor(cvehd.substr(0x12E,4));
 			curve.symbolColor = getColor(cvehd.substr(0x132,4));
 			curve.vector.color = curve.symbolColor;
@@ -2375,9 +2362,6 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 
 			h = cvehd[0x143];
 			curve.connectSymbols = (h&0x8);
-		} catch (const std::out_of_range& oor) {
-			cerr << "WARNING while getting curve properties. Out of range error: " <<  oor.what() << endl;
-			LOG_PRINT(logfile, "WARNING while getting curve properties. Out of range error: %s\n", oor.what())
 		}
 	}
 }
