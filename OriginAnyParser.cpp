@@ -107,48 +107,44 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data) {
 
 	// Note windows were added between version >4.141 and 4.210,
 	// i.e., with Release 5.0
-	if (curpos >= d_file_size) {
-		LOG_PRINT(logfile, "Now at end of file\n")
-		return true;
-	}
+	if (curpos < d_file_size) {
+		// get note windows list
+		unsigned int note_list_size = 0;
 
-	// get note windows list
-	unsigned int note_list_size = 0;
-
-	LOG_PRINT(logfile, "Reading Note windows ...\n")
-	// Note windows have an independent index
-	objectIndex = 0;
-	while (true) {
-		if (!readNoteElement()) break;
-		note_list_size++;
+		LOG_PRINT(logfile, "Reading Note windows ...\n")
+		// Note windows have an independent index
+		objectIndex = 0;
+		while (true) {
+			if (!readNoteElement()) break;
+			note_list_size++;
+		}
+		LOG_PRINT(logfile, " ... done. Note windows: %d\n", note_list_size)
+		curpos = file.tellg();
+		LOG_PRINT(logfile, "Now at %ld [0x%lX], filesize %d\n", curpos, curpos, d_file_size)
 	}
-	LOG_PRINT(logfile, " ... done. Note windows: %d\n", note_list_size)
-	curpos = file.tellg();
-	LOG_PRINT(logfile, "Now at %ld [0x%lX], filesize %d\n", curpos, curpos, d_file_size)
 
 	// Project Tree was added between version >4.210 and 4.2616,
 	// i.e., with Release 6.0
-	if (curpos >= d_file_size) {
-		LOG_PRINT(logfile, "Now at end of file\n")
-		return true;
+	if (curpos < d_file_size) {
+		// get project tree
+		readProjectTree();
+		curpos = file.tellg();
+		LOG_PRINT(logfile, "Now at %ld [0x%lX], filesize %d\n", curpos, curpos, d_file_size)
 	}
-
-	// get project tree
-	readProjectTree();
-	curpos = file.tellg();
-	LOG_PRINT(logfile, "Now at %ld [0x%lX], filesize %d\n", curpos, curpos, d_file_size)
 
 	// Attachments were added between version >4.2673_558 and 4.2764_623,
 	// i.e., with Release 7.0
-	if (curpos >= d_file_size) {
-		LOG_PRINT(logfile, "Now at end of file\n")
-		return true;
+	if (curpos < d_file_size) {
+		readAttachmentList();
+		curpos = file.tellg();
+		LOG_PRINT(logfile, "Now at %ld [0x%lX], filesize %d\n", curpos, curpos, d_file_size)
 	}
 
-	readAttachmentList();
-	curpos = file.tellg();
-	LOG_PRINT(logfile, "Now at %ld [0x%lX], filesize %d\n", curpos, curpos, d_file_size)
 	if (curpos >= d_file_size) LOG_PRINT(logfile, "Now at end of file\n")
+
+#ifndef NO_CODE_GENERATION_FOR_LOG
+	fclose(logfile);
+#endif // NO_CODE_GENERATION_FOR_LOG
 
 	return true;
 }
@@ -720,7 +716,9 @@ void OriginAnyParser::readProjectTree() {
 	(void) pte_post_size; // supress compiler warning
 
 	// log info on project tree
+#ifndef NO_CODE_GENERATION_FOR_LOG
 	outputProjectTree();
+#endif // NO_CODE_GENERATION_FOR_LOG
 
 	return;
 }
