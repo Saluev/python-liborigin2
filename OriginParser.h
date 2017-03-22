@@ -47,7 +47,6 @@ class OriginParser
 public:
 	virtual ~OriginParser() {};
 	virtual bool parse(ProgressCallback = NULL, void* = NULL) = 0;
-	void setBuildVersion(unsigned int version){buildVersion = version;};
 
 	vector<Origin::SpreadSheet>::difference_type findSpreadByName(const string& name) const;
 	vector<Origin::Matrix>::difference_type findMatrixByName(const string& name) const;
