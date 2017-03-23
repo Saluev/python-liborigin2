@@ -142,6 +142,19 @@ bool OriginAnyParser::parse(ProgressCallback callback, void *user_data) {
 
 	if (curpos >= d_file_size) LOG_PRINT(logfile, "Now at end of file\n")
 
+	// drop unused matrix datasets
+	vector<Origin::Matrix> validMatrices;
+	for(unsigned int i = 0; i < matrixes.size(); ++i){
+		Matrix m = matrixes[i];
+		if (m.objectID >= 0) {
+			validMatrices.push_back(m);
+		} else {
+			LOG_PRINT(logfile, "Matrix data set %d: %s is not used.\n", i, m.name.c_str())
+		}
+	}
+	matrixes.clear();
+	matrixes = validMatrices;
+
 #ifndef NO_CODE_GENERATION_FOR_LOG
 	fclose(logfile);
 #endif // NO_CODE_GENERATION_FOR_LOG
