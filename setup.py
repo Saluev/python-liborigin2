@@ -17,7 +17,7 @@ src = ["liborigin.pyx",
         "OriginAnyParser.cpp",
         "OriginFile.cpp",
         "OriginParser.cpp"]
-surf3d_ext = Extension("liborigin", src, language='c++')
+surf3d_ext = Extension("liborigin", src, language='c++', extra_compile_args=["-std=c++11"])
 # surf3d_ext = cythonize("liborigin.pyx", sources=src, language="c++")
 
 # finally, we can pass all this to distutils
