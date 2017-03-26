@@ -934,13 +934,21 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 	GET_SHORT(stmp, data_type);
 
 	data_type_u = col_header[0x3F];
-	valuesize = col_header[0x3D];
+	if (fileVersion == 350) {
+		valuesize = col_header[0x36];
+	} else {
+		valuesize = col_header[0x3D];
+	}
 	if(valuesize == 0) {
 		LOG_PRINT(logfile, "	WARNING : found strange valuesize of %d\n", (int)valuesize);
-		valuesize = 10;
+		valuesize = 8;
 	}
 
-	name = col_header.substr(0x58,25).c_str();
+	if (fileVersion == 350) {
+		name = col_header.substr(0x57,25).c_str();
+	} else {
+		name = col_header.substr(0x58,25).c_str();
+	}
 	string::size_type colpos = name.find_last_of("_");
 
 	if(colpos != string::npos){
@@ -1860,8 +1868,10 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 		unsigned char c = cvehd[0x11];
 		string name = cvehd.substr(0x12).c_str();
 		unsigned short width = 0;
-		stmp.str(cvehd.substr(0x4A));
-		GET_SHORT(stmp, width)
+		if (cvehdsz > 0x4B) {
+			stmp.str(cvehd.substr(0x4A));
+			GET_SHORT(stmp, width)
+		}
 		int col_index = findColumnByName(ispread, name);
 		if (col_index != -1) {
 			if (speadSheets[ispread].columns[col_index].name != name)
