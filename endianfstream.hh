@@ -256,7 +256,7 @@ namespace std
 		inline void tell(void)
 		{
 		    long pos = tellg();
-		    if(callback && callback_user_data && pos % 10240 /*x 10KB*/ == 0)
+		    if(callback && callback_user_data)// && pos % 10240 /*x 10KB*/ == 0)
 		    {
 		        double progress = pos / (double)size;
 		        int currProgress = 100 * progress;
