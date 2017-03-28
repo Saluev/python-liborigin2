@@ -7,7 +7,7 @@ It is based on the code at
  * http://sourceforge.net/projects/liborigin
  * http://soft.proindependent.com/liborigin2
 
-AUTHORS:  Stefan Gerlach, Ion Vasilief, Alex Kargovsky
+AUTHORS:  Stefan Gerlach, Ion Vasilief, Alex Kargovsky, Miquel Garriga
 
 PYTHON WRAPPING: Tigran Saluev
 
@@ -56,6 +56,6 @@ file_contents = liborigin.parseOriginFile("my_awesome_project.opj")
 
 Features
 ---------------------------------------------------------------------------
- * supports the import of 6.0 - 8.1 projects.
+ * supports the import of 3.5 to latest (2017) projects.
  
 ---------------------------------------------------------------------------
