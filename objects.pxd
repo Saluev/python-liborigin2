@@ -218,8 +218,8 @@ cdef extern from "OriginObj.h" namespace "Origin":
         #Matrix(const string& _name = "", unsigned int _index = 0)
     
     cdef cppclass Matrix(Window):
-        Matrix_HeaderViewType header
         unsigned int activeSheet
+        Matrix_HeaderViewType header
         vector[MatrixSheet] sheets
 
     cdef cppclass Function:

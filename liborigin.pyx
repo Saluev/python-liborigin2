@@ -163,6 +163,8 @@ cdef class MatrixSheet:
 cdef class Matrix(Window):
     
     cdef public int activeSheet
+    cdef public int header # enums
+    cdef public object sheets
 
     cdef void copy(self, const objects.Window *wnd):
         Window.copy(self, wnd)
