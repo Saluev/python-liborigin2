@@ -2131,6 +2131,9 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 		GET_SHORT(stmp, w)
 		curve.lineWidth = (double)w/500.0;
 
+		stmp.str(cvehd.substr(0x17));
+		GET_SHORT(stmp, curve.symbolType)
+
 		stmp.str(cvehd.substr(0x19));
 		GET_SHORT(stmp, w)
 		curve.symbolSize = (double)w/500.0;
@@ -2350,8 +2353,12 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 			}
 		}
 
-		stmp.str(cvehd.substr(0x17));
-		GET_SHORT(stmp, curve.symbolType)
+		if (fileVersion >= 850) {
+			curve.lineTransparency = cvehd[0x9C];
+			h = cvehd[0x9D];
+			curve.fillAreaWithLineTransparency = !h;
+			curve.fillAreaTransparency = cvehd[0x11E];
+		}
 
 		if (cvehdsz > 0x143) {
 			curve.fillAreaColor = getColor(cvehd.substr(0xC2,4));
