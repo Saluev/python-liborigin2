@@ -1457,11 +1457,9 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 		} else if (sec_name == "X1") {
 			stmp >> sheet.coordinates[3];
 		} else if (sec_name == "COLORMAP") {
-			cout << "COLORMAP annotation: parsing not implemented yet" << endl;
-			// TODO: implement getColorMap
-			// still not clear how to handle it.
-			// Color maps for matrix annotations seem to differ from color maps for graph curves (3D).
-			// getColorMap(sheet.colorMap, andt2, andt2sz);
+			// Color maps for matrix annotations are similar to color maps for graph curves (3D).
+			// They differ only in the start offset to the data string.
+			getColorMap(sheet.colorMap, andt2, andt2sz);
 		}
 
 	} else if (iexcel != -1) {
@@ -2738,12 +2736,22 @@ void OriginAnyParser::getNoteProperties(string nwehd, unsigned int nwehdsz, stri
 
 void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int cmapdatasz) {
 	istringstream stmp;
+	unsigned int cmoffset = 0;
+	// color maps for matrix annotations have a different offset than graph curve's colormaps
+	if (imatrix != -1) {
+		cmoffset = 0x14;
+	} else if (igraph != -1) {
+		cmoffset = 0x6C;
+	} else {
+		return;
+	}
 
-	stmp.str(cmapdata.substr(0x6C));
+	stmp.str(cmapdata.substr(cmoffset));
 	unsigned int colorMapSize = 0;
 	GET_INT(stmp, colorMapSize)
+
 	// check we have enough data to fill the map
-	unsigned int minDataSize = 0x180+(colorMapSize+2)*0x38;
+	unsigned int minDataSize = cmoffset + 0x114 + (colorMapSize+2)*0x38;
 	if (minDataSize > cmapdatasz) {
 		cerr << "WARNING: Too few data while getting ColorMap. Needed: at least " << minDataSize << " bytes. Have: " << cmapdatasz << " bytes." << endl;
 		LOG_PRINT(logfile, "WARNING: Too few data while getting ColorMap. Needed: at least %d bytes. Have: %d bytes.\n", minDataSize, cmapdatasz)
@@ -2752,7 +2760,7 @@ void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int 
 
 	unsigned int lvl_offset = 0;
 	for (unsigned int i = 0; i < colorMapSize + 3; ++i) {
-		lvl_offset = 0x180 + i*0x38;
+		lvl_offset = cmoffset + 0x114 + i*0x38;
 		ColorMapLevel level;
 
 		level.fillPattern = cmapdata[lvl_offset];
@@ -2789,7 +2797,7 @@ void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int 
 void OriginAnyParser::getZcolorsMap(ColorMap& colorMap, string cmapdata, unsigned int cmapdatasz) {
 	istringstream stmp;
 
-	Color lowColor;//color bellow
+	Color lowColor;//color below
 	lowColor.type = Origin::Color::Custom;
 	lowColor.custom[0] = cmapdata[0x0E];
 	lowColor.custom[1] = cmapdata[0x0F];
