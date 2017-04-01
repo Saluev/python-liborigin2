@@ -65,6 +65,7 @@ protected:
 	void getAxisParameterProperties(string, unsigned int, int);
 	void getNoteProperties(string, unsigned int, string, unsigned int, string, unsigned int);
 	void getColorMap(ColorMap&, string, unsigned int);
+	void getZcolorsMap(ColorMap&, string, unsigned int);
 	void getProjectLeafProperties(tree<ProjectNode>::iterator, string, unsigned int);
 	void getProjectFolderProperties(tree<ProjectNode>::iterator, string, unsigned int);
 	void outputProjectTree();

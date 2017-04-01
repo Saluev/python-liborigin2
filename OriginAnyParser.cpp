@@ -1754,6 +1754,10 @@ void OriginAnyParser::getAnnotationProperties(string anhd, unsigned int anhdsz, 
 		}
 		else if (sec_name == "ZCOLORS") {
 			glayer.isXYY3D = true;
+			if (fileVersion < 600) {
+				ColorMap& colorMap = glayer.colorMap;
+				getZcolorsMap(colorMap, andt2, andt2sz);
+			}
 		}
 		else if (sec_name == "SPECTRUM1") {
 			glayer.isXYY3D = false;
@@ -2350,6 +2354,8 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 			}
 			if (cvedtsz > 0x6C) {
 				getColorMap(colorMap, cvedt, cvedtsz);
+			} else {
+				colorMap = glayer.colorMap;
 			}
 		}
 
@@ -2778,6 +2784,76 @@ void OriginAnyParser::getColorMap(ColorMap& cmap, string cmapdata, unsigned int 
 		cmap.levels.push_back(make_pair(value, level));
 	}
 
+}
+
+void OriginAnyParser::getZcolorsMap(ColorMap& colorMap, string cmapdata, unsigned int cmapdatasz) {
+	istringstream stmp;
+
+	Color lowColor;//color bellow
+	lowColor.type = Origin::Color::Custom;
+	lowColor.custom[0] = cmapdata[0x0E];
+	lowColor.custom[1] = cmapdata[0x0F];
+	lowColor.custom[2] = cmapdata[0x10];
+	// skip an unsigned char at 0x11
+
+	Color highColor;//color above
+	highColor.type = Origin::Color::Custom;
+	highColor.custom[0] = cmapdata[0x12];
+	highColor.custom[1] = cmapdata[0x13];
+	highColor.custom[2] = cmapdata[0x14];
+	// skip an unsigned char at 0x15
+
+	unsigned short colorMapSize;
+	stmp.str(cmapdata.substr(0x16));
+	GET_SHORT(stmp, colorMapSize)
+	// skip a short at 0x18-0x19
+
+	for(unsigned int i = 0; i < 4; ++i) {//low, high, middle and missing data colors
+		Color color;
+		color.type = Origin::Color::Custom;
+		color.custom[0] = cmapdata[0x1A+4*i];
+		color.custom[1] = cmapdata[0x1B+4*i];
+		color.custom[2] = cmapdata[0x1C+4*i];
+	}
+
+	double zmin, zmax, zmissing;
+	stmp.str(cmapdata.substr(0x2A));
+	GET_DOUBLE(stmp, zmin);
+	GET_DOUBLE(stmp, zmax);
+	GET_DOUBLE(stmp, zmissing);
+
+	short val;
+	for (unsigned int i = 0; i < 2; ++i) {
+		Color color;
+		color.type = Origin::Color::Custom;
+		color.custom[0] = cmapdata[0x66+10*i];
+		color.custom[1] = cmapdata[0x67+10*i];
+		color.custom[2] = cmapdata[0x68+10*i];
+		// skip an unsigned char at 0x69+10*i
+		stmp.str(cmapdata.substr(0x6A+10*i));
+		GET_SHORT(stmp, val)
+	}
+
+	ColorMapLevel level;
+	level.fillColor = lowColor;
+	colorMap.levels.push_back(make_pair(zmin, level));
+
+	for (unsigned int i = 0; i < (colorMapSize + 1); ++i) {
+		Color color;
+		color.type = Origin::Color::Custom;
+		color.custom[0] = cmapdata[0x7A+10*i];
+		color.custom[1] = cmapdata[0x7B+10*i];
+		color.custom[2] = cmapdata[0x7C+10*i];
+		// skip an unsigned char at 0x7D+10*i
+		stmp.str(cmapdata.substr((0x7E)+10*i));
+		GET_SHORT(stmp, val)
+
+		level.fillColor = color;
+		colorMap.levels.push_back(make_pair(val, level));
+	}
+
+	level.fillColor = highColor;
+	colorMap.levels.push_back(make_pair(zmax, level));
 }
 
 void OriginAnyParser::getProjectLeafProperties(tree<ProjectNode>::iterator current_folder, string ptldt, unsigned int ptldtsz) {

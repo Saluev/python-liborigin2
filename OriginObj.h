@@ -702,6 +702,7 @@ namespace Origin
 
 		PercentileProperties percentile;
 		ColorScale colorScale;
+		ColorMap colorMap;
 
 		vector<TextBox> texts;
 		vector<TextBox> pieTexts;
