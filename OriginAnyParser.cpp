@@ -2336,7 +2336,7 @@ void OriginAnyParser::getCurveProperties(string cvehd, unsigned int cvehdsz, str
 			h = cvehd[0x13];
 			colorMap.fillEnabled = (h & 0x82);
 
-			if (curve.type == GraphCurve::Contour) {
+			if ((curve.type == GraphCurve::Contour) && (cvehdsz > 0x89)) {
 				stmp.str(cvehd.substr(0x7A));
 				GET_SHORT(stmp, curve.text.fontSize)
 
