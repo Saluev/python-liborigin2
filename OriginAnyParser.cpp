@@ -982,7 +982,7 @@ bool OriginAnyParser::getColumnInfoAndData(string col_header, unsigned int col_h
 	int spread = 0;
 
 	if (column_name.empty()) { // Matrix or function
-		if (valuesize == col_data_size) { // only one row: Function
+		if (data_type == 0x6081) { // Function
 			functions.push_back(Function(name, dataIndex));
 			++dataIndex;
 			Origin::Function &f = functions.back();
