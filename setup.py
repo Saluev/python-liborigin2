@@ -12,12 +12,12 @@ except:
     sys.exit(1)
 
 
-src = ["liborigin.pyx", "OriginObj.cpp",
-       "opj2dat.cpp", "Origin750Parser.cpp", "OriginFile.cpp",
-       "Origin600Parser.cpp", "Origin800Parser.cpp", "OriginParser.cpp",
-       "Origin610Parser.cpp", "Origin810Parser.cpp",
-       "Origin700Parser.cpp", "OriginDefaultParser.cpp"]
-surf3d_ext = Extension("liborigin", src, language='c++')
+src = ["liborigin.pyx",
+        "OriginObj.cpp",
+        "OriginAnyParser.cpp",
+        "OriginFile.cpp",
+        "OriginParser.cpp"]
+surf3d_ext = Extension("liborigin", src, language='c++', extra_compile_args=["-std=c++11"])
 # surf3d_ext = cythonize("liborigin.pyx", sources=src, language="c++")
 
 # finally, we can pass all this to distutils

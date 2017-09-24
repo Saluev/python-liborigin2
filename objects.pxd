@@ -182,6 +182,7 @@ cdef extern from "OriginObj.h" namespace "Origin":
         string comment
         int width
         unsigned int index
+        unsigned int colIndex
         unsigned int sheet
         vector[variant] data
         SpreadColumn(const string& _name = "", unsigned int _index = 0)
@@ -189,7 +190,6 @@ cdef extern from "OriginObj.h" namespace "Origin":
     cdef cppclass SpreadSheet(Window):
         unsigned int maxRows
         bool loose
-        bool multisheet
         unsigned int sheets
         vector[SpreadColumn] columns
         #SpreadSheet(const string& _name = "")
@@ -200,7 +200,8 @@ cdef extern from "OriginObj.h" namespace "Origin":
         vector[SpreadSheet] sheets
         #Excel(const string& _name = "", const string& _label = "", int _maxRows = 0, bool _hidden = false, bool _loose = true)
     
-    cdef cppclass Matrix(Window):
+    cdef cppclass MatrixSheet:
+        string name
         unsigned short rowCount
         unsigned short columnCount
         int valueTypeSpecification
@@ -208,16 +209,19 @@ cdef extern from "OriginObj.h" namespace "Origin":
         int decimalPlaces
         NumericDisplayType numericDisplayType
         string command
-        int width
+        unsigned short width
         unsigned int index
-        unsigned int sheets
         Matrix_ViewType view
-        Matrix_HeaderViewType header
         ColorMap colorMap
         vector[double] data
         vector[double] coordinates
         #Matrix(const string& _name = "", unsigned int _index = 0)
     
+    cdef cppclass Matrix(Window):
+        unsigned int activeSheet
+        Matrix_HeaderViewType header
+        vector[MatrixSheet] sheets
+
     cdef cppclass Function:
         string name
         Function_FunctionType type
@@ -320,14 +324,18 @@ cdef extern from "OriginObj.h" namespace "Origin":
         double boxCoeff
         double whiskersCoeff
         bool diamondBox
+        unsigned char labels
     
     cdef cppclass GraphCurve:
+        bool hidden
         unsigned char type
         string dataName
+        string xDataName
         string xColumnName
         string yColumnName
         string zColumnName
         Color lineColor
+        unsigned char lineTransparency
         unsigned char lineStyle
         unsigned char lineConnect
         unsigned char boxWidth
@@ -336,6 +344,8 @@ cdef extern from "OriginObj.h" namespace "Origin":
         unsigned char fillAreaType
         unsigned char fillAreaPattern
         Color fillAreaColor
+        unsigned char fillAreaTransparency
+        bool fillAreaWithLineTransparency
         Color fillAreaPatternColor
         double fillAreaPatternWidth
         unsigned char fillAreaPatternBorderStyle
@@ -344,6 +354,7 @@ cdef extern from "OriginObj.h" namespace "Origin":
         unsigned short symbolType
         Color symbolColor
         Color symbolFillColor
+        unsigned char symbolFillTransparency
         double symbolSize
         unsigned char symbolThickness
         unsigned char pointOffset
@@ -384,9 +395,10 @@ cdef extern from "OriginObj.h" namespace "Origin":
         TextBox label
         string prefix
         string suffix
+        string factor
 
     cdef cppclass GraphAxisTick:
-        bool hidden
+        bool showMajorLabels
         unsigned char color
         ValueType valueType
         int valueTypeSpecification
@@ -399,6 +411,8 @@ cdef extern from "OriginObj.h" namespace "Origin":
 
     cdef cppclass GraphAxis:
         GraphAxis_AxisPosition position
+        bool zeroLine
+        bool oppositeLine
         double min
         double max
         double step
@@ -452,6 +466,7 @@ cdef extern from "OriginObj.h" namespace "Origin":
         Bitmap(const Bitmap& bitmap)
 
     cdef cppclass ColorScale:
+        bool visible
         bool reverseOrder
         unsigned short labelGap
         unsigned short colorBarThickness
@@ -479,13 +494,22 @@ cdef extern from "OriginObj.h" namespace "Origin":
         vector[Figure] figures
         vector[Bitmap] bitmaps
         vector[GraphCurve] curves
+        float xAngle
+        float yAngle
+        float zAngle
         float xLength
         float yLength
         float zLength
-        bool imageProfileTool
+        int imageProfileTool
         double vLine
         double hLine
+        bool isWaterfall
+        int xOffset
+        int yOffset
+        bool gridOnTop
+        bool exchangedAxes
         bool isXYY3D
+        bool orthographic3D
         GraphLayer()
         #bool threeDimensional
         bool is3D() const
@@ -502,6 +526,8 @@ cdef extern from "OriginObj.h" namespace "Origin":
         unsigned short height
         bool is3D
         bool isLayout
+        bool connectMissingData
+        string templateName
         #Graph(const string& _name = "")
 
     cdef cppclass Note(Window):
@@ -513,6 +539,7 @@ cdef extern from "OriginObj.h" namespace "Origin":
         string name
         time_t creationDate
         time_t modificationDate
+        bool active
         ProjectNode(const string& _name = "", ProjectNode_NodeType _type = Folder, const time_t _creationDate = time(NULL), const time_t _modificationDate = time(NULL))
 
 cdef extern from "OriginObj.h":
