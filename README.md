@@ -21,7 +21,7 @@ To compile, liborigin (still) depends on
  * latest version of Cython http://cython.org/
 
 Note that the BOOST libraries are not needed at run time, neither are linked in the executable.
-For Ubuntu users both BOOST and Doxygen can be installled viao package manager:
+For Ubuntu users both BOOST and Doxygen can be installed via package manager:
 
 	sudo apt install build-essential libboost-system-dev libboost-thread-dev libboost-program-options-dev libboost-test-dev doxygen
 
