@@ -17,9 +17,13 @@ To compile, liborigin (still) depends on
  * BOOST C++ libraries  http://www.boost.org/
 			boost/algorithm/string.hpp, boost/variant.hpp and its dependencies.
  * tree.hh (included) http://tree.phi-sci.com/
+ * Doxygen (optional, just for documentation) https://doxygen.nl/
  * latest version of Cython http://cython.org/
 
 Note that the BOOST libraries are not needed at run time, neither are linked in the executable.
+For Ubuntu users both BOOST and Doxygen can be installled viao package manager:
+
+	sudo apt install build-essential libboost-system-dev libboost-thread-dev libboost-program-options-dev libboost-test-dev doxygen
 
 Compiling
 ---------------------------------------------------------------------------
