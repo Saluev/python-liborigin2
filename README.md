@@ -49,7 +49,9 @@ To build Python module, just type
 Python Usage
 ---------------------------------------------------------------------------
 
-To get Origin project contents, simply use
+In your script, import the path to the `liborigin.pyx` package using your favorite method (see https://fortierq.github.io/python-import/).
+
+To import the content of an Origin project `.opj`, simply type:
 
 ```python
 import liborigin
